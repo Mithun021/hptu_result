@@ -1,0 +1,42 @@
+@include('backend.partial.header')
+@include('backend.partial.topbar')
+@include('backend.partial.sidebar')
+<div class="content-page">
+    <div class="content">
+
+        <!-- Start Content-->
+        <div class="container-fluid">
+
+            <div class="py-3 d-flex align-items-sm-center flex-sm-row flex-column">
+                <div class="flex-grow-1">
+                    <h4 class="fs-18 fw-semibold m-0">Dashboard</h4>
+                </div>
+
+                <div class="text-end">
+                    <ol class="breadcrumb m-0 py-0">
+                        <li class="breadcrumb-item"><a href="javascript: void(0);">@yield('title', 'Dashboard')</a></li>
+                        <li class="breadcrumb-item active">@yield('sub_title', 'Home')</li>
+                    </ol>
+                </div>
+            </div>
+       
+                    @yield('backend-content')
+        
+            </div> <!-- container-fluid -->
+
+    </div> <!-- content -->
+
+    <!-- Footer Start -->
+    <footer class="footer">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col fs-13 text-muted text-center">
+                    &copy; <script>document.write(new Date().getFullYear())</script> - Developed by <a href="#!" class="text-reset fw-semibold">Vocman India Pvt. Ltd.</a> 
+                </div>
+            </div>
+        </div>
+    </footer>
+    <!-- end Footer -->
+
+</div>
+@include('backend.partial.footer')

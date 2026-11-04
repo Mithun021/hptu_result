@@ -1,0 +1,10 @@
+id,student_roll_no,subject_name,subject_code,course_type,course_name,scheme_name,branch_name,semester_name,annual_year
+1,L-2025-BT-02-B,Introduction to Biotechnology,BTY 121,Semester Based,B.Tech,,Biotechnology,II,
+2,L-2025-BT-02-B,Introduction to Plant Breeding,BTY 122,Semester Based,B.Tech,,Biotechnology,II,
+3,L-2025-BT-02-B,Elementary Microbiology,BTY 123,Semester Based,B.Tech,,Biotechnology,II,
+4,L-2025-BT-02-B,Environmental Studies and Disaster Management,VAC 121,Semester Based,B.Tech,,Biotechnology,II,
+5,L-2025-BT-02-B, Entrepreneurship Development and Business Management,MDC 121,Semester Based,B.Tech,,Biotechnology,II,
+6,L-2025-BT-02-B,Personality Development,AEC 121,Semester Based,B.Tech,,Biotechnology,II,
+7,L-2025-BT-02-B,SEC 3: Basic techniques of Molecular Biology and Biotechnology,SEC 121,Semester Based,B.Tech,,Biotechnology,II,
+8,L-2025-BT-02-B,SEC 4: Bioinformatics and Biocomputation,SEC 122,Semester Based,B.Tech,,Biotechnology,II,
+9,L-2025-BT-02-B,National Service Scheme II,NSS 121,Semester Based,B.Tech,,Biotechnology,II,

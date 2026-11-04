@@ -1,0 +1,2 @@
+id,course_type,course_id,branch_id,semester_id,annual_semester_id,scheme_id,name,type,subject_code,theory_credits,practical_credits,total_credits,internal1,internal2,internal2,external_paper1,external_paper2,practical_paper1,practical_paper2,internal_marks,external_marks,total
+1,Annual Based,COURSE NAME,BRANCH NAME,I,,NEP,ABC TECH,Theory,ABC-123,0,0,4,10,15,15,10,10,10,10,40,60,100

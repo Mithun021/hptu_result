@@ -1,0 +1,2 @@
+id,university_roll_no,reg_no,admission_year,student_name,father_name,mother_name,abcid,gender,dob,aadhar,current_address,parmanent_address,phone,email,nationality,state,city,category,course_id,scheme_id,branch_id,semester_id,batch_id,institute_id,profile_image,signature
+1,1234567890,1,01-01-2000,ABCD,MNOP,PQRS,131,male,01-01-1998,1.23E+11,Abc 0001,Abc 001,9876543210,abc@example.com,Indian,Himachal Pradesh,Abc,OBC,MASTER OF TECHNOLOGY,NEP,Civil Engineering,,2016-2018,"Government College Una, Distt. Una (H.P.)",,
