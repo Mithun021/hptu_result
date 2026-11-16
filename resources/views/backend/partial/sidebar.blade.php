@@ -39,13 +39,14 @@
                 <li>
                     <a href="#master" data-bs-toggle="collapse">
                         <i data-feather="aperture"></i>
-                        <span>Result Master </span>
+                        <span>Exam / Result Master </span>
                         <span class="menu-arrow"></span>
                     </a>
                     <div class="collapse" id="master">
                         <ul class="nav-second-level">
                             <li><a href="{{ route('exams.index') }}" class="tp-link">Exam Name</a></li>
                             <li><a href="{{ route('mid-sem-exams.index') }}" class="tp-link">Mid-Sem/Internal Exam Name</a></li>
+                            <li><a href="{{ route('exam-fees.index') }}" class="tp-link">Exam Fees</a></li>
                             <li><a href="{{ route('pass-percentages.index') }}" class="tp-link">Pass Percentage</a></li>
                             <li><a href="{{ route('marks-grades.index') }}" class="tp-link">Marks Grade</a></li>
                             {{-- <li><a href="{{ route('grace-mark-policies.index') }}" class="tp-link">Grace Marks Policy</a></li> --}}

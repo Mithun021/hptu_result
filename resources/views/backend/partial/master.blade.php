@@ -19,9 +19,9 @@
                     </ol>
                 </div>
             </div>
-       
+
                     @yield('backend-content')
-        
+
             </div> <!-- container-fluid -->
 
     </div> <!-- content -->
@@ -31,7 +31,7 @@
         <div class="container-fluid">
             <div class="row">
                 <div class="col fs-13 text-muted text-center">
-                    &copy; <script>document.write(new Date().getFullYear())</script> - Developed by <a href="#!" class="text-reset fw-semibold">Vocman India Pvt. Ltd.</a> 
+                    &copy; <script>document.write(new Date().getFullYear())</script> - Developed by <a href="#!" class="text-reset fw-semibold">Dcode Materials</a>
                 </div>
             </div>
         </div>
