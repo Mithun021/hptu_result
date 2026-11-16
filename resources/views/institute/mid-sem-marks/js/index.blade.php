@@ -3,6 +3,89 @@
 
 <script>
 
+    $(document).ready(function () {
+
+        $('#course_type, #export_course_type').on('change', function () {
+
+            let courseType = $(this).val();
+
+            // Identify corresponding dropdown
+            let examDropdown = $(this).attr('id') == 'course_type'
+                ? $('#mid_sem_exam_id')
+                : $('#export_mid_sem_exam_id');
+
+            // Reset dropdown
+            examDropdown.html('<option value="">--Select--</option>');
+
+            if (courseType == '') {
+                return;
+            }
+
+            $.ajax({
+
+                url: "{{ route('coursebased.get.mid.sem.exams') }}",
+
+                type: "GET",
+
+                data: {
+                    course_type: courseType
+                },
+
+                dataType: "json",
+
+                beforeSend: function () {
+
+                    examDropdown.html(
+                        '<option value="">Loading...</option>'
+                    );
+
+                },
+
+                success: function (response) {
+
+                    examDropdown.html(
+                        '<option value="">--Select--</option>'
+                    );
+
+                    if (response.status && response.data.length > 0) {
+
+                        $.each(response.data, function (index, exam) {
+
+                            examDropdown.append(
+                                $('<option>', {
+                                    value: exam.id,
+                                    text: exam.mid_sem_exam_name
+                                })
+                            );
+
+                        });
+
+                    } else {
+
+                        examDropdown.html(
+                            '<option value="">No Exam Found</option>'
+                        );
+
+                    }
+
+                },
+
+                error: function (xhr) {
+
+                    console.log(xhr.responseText);
+
+                    examDropdown.html(
+                        '<option value="">Failed to load exams</option>'
+                    );
+
+                }
+
+            });
+
+        });
+
+    });
+
     $(document).on('keydown', '.obtained-marks', function(e) {
         if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
             e.preventDefault();

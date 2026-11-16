@@ -22,18 +22,38 @@ class StudentController extends Controller
 {
     public function index()
     {
-        return view('institute.students.index');
+        $user = auth('institute')->user();
+        $institute_id = $user->account_type === 'institute'
+                            ? $user->id
+                            : $user->institute_id;
+        $courses = Course::whereHas('institutes', function ($q) use ($institute_id) {
+            $q->where('institutes.id', $institute_id);
+        })->get();
+        return view('institute.students.index', compact('courses'));
     }
-
+    
     public function data()
     {
         $authUser = auth('institute')->user();
-
-        // Determine institute id
+    
+        if (!$authUser) {
+            abort(401, 'Unauthenticated institute.');
+        }
+    
+        // =========================================
+        // AUTHENTICATED INSTITUTE ID
+        // =========================================
         $institute_id = $authUser->account_type === 'institute'
-                            ? $authUser->id
-                            : $authUser->institute_id;
-
+            ? $authUser->id
+            : $authUser->institute_id;
+    
+        if (!$institute_id) {
+            abort(403, 'Institute not assigned.');
+        }
+    
+        // =========================================
+        // BASE QUERY: CURRENT INSTITUTE ONLY
+        // =========================================
         $students = Student::with([
             'course',
             'branch',
@@ -42,106 +62,406 @@ class StudentController extends Controller
             'scheme',
             'batch',
             'institute'
-        ])->where('students.institute_id', $institute_id)
-        ->select('students.*')
-        ->orderBy('students.institute_id')
-        ->orderBy('students.course_id')
-        ->orderBy('students.branch_id')
-        ->orderBy('students.semester_id')
-        ->orderBy('students.annual_semester_id')
-        ->orderBy('students.scheme_id')
-        ->orderBy('students.scheme_id')
-        ->orderByDesc('students.batch_id');
-
+        ])
+        ->where('students.institute_id', $institute_id)
+        ->select('students.*');
+    
+        // =========================================
+        // FILTER: UNIVERSITY ROLL NUMBER
+        // =========================================
+        if (request()->filled('student_roll_number')) {
+            $rollNumber = trim(request('student_roll_number'));
+    
+            $students->where(
+                'students.university_roll_no',
+                'LIKE',
+                '%' . $rollNumber . '%'
+            );
+        }
+    
+        // =========================================
+        // FILTER: COURSE TYPE
+        // =========================================
+        if (request()->filled('course_type')) {
+            $courseType = request('course_type');
+    
+            if (in_array($courseType, [
+                'Semester Based',
+                'Annual Based'
+            ], true)) {
+                $students->whereHas('course', function ($query) use ($courseType) {
+                    $query->where('course_type', $courseType);
+                });
+            }
+        }
+    
+        // =========================================
+        // FILTER: COURSE
+        // =========================================
+        if (request()->filled('course_id')) {
+            $students->where(
+                'students.course_id',
+                request('course_id')
+            );
+        }
+    
+        // =========================================
+        // FILTER: SCHEME
+        // =========================================
+        if (request()->filled('scheme_id')) {
+            $students->where(
+                'students.scheme_id',
+                request('scheme_id')
+            );
+        }
+    
+        // =========================================
+        // FILTER: BRANCH
+        // =========================================
+        if (request()->filled('branch_id')) {
+            $students->where(
+                'students.branch_id',
+                request('branch_id')
+            );
+        }
+    
+        // =========================================
+        // FILTER: SEMESTER
+        // =========================================
+        if (
+            request('course_type') === 'Semester Based' &&
+            request()->filled('semester_id')
+        ) {
+            $students->where(
+                'students.semester_id',
+                request('semester_id')
+            );
+        }
+    
+        // =========================================
+        // FILTER: ANNUAL TERM
+        // =========================================
+        if (
+            request('course_type') === 'Annual Based' &&
+            request()->filled('annual_semester_id')
+        ) {
+            $students->where(
+                'students.annual_semester_id',
+                request('annual_semester_id')
+            );
+        }
+    
+        // =========================================
+        // FILTER: BATCH
+        // =========================================
+        if (request()->filled('batch_id')) {
+            $students->where(
+                'students.batch_id',
+                request('batch_id')
+            );
+        }
+    
+        // =========================================
+        // ORDERING
+        // =========================================
+        $students
+            ->orderBy('students.institute_id')
+            ->orderByRaw("
+                CAST(
+                    SUBSTRING_INDEX(
+                        SUBSTRING_INDEX(students.university_roll_no, '-', 2),
+                        '-', -1
+                    ) AS UNSIGNED
+                ) ASC,
+                CAST(
+                    SUBSTRING_INDEX(
+                        SUBSTRING_INDEX(students.university_roll_no, '-', 4),
+                        '-', -1
+                    ) AS UNSIGNED
+                ) ASC
+            ")
+            ->orderBy('students.id', 'asc');
+    
+        // =========================================
+        // DATATABLE RESPONSE
+        // =========================================
         return DataTables::of($students)
+    
             ->addIndexColumn()
-
+    
             ->addColumn('student', function ($row) {
-                return '<strong>'.$row->student_name.'</strong><br>
-                        <small class="text-primary">Reg: '.$row->reg_no.'</small>';
+                return '<strong>' . e($row->student_name) . '</strong><br>
+                        <small class="text-primary">Reg: '
+                        . e($row->reg_no ?? '-') . '</small>';
             })
-
-            ->addColumn('father', fn ($row) => $row->father_name ?? '-')
-            ->addColumn('university_roll', fn ($row) => $row->university_roll_no ?? '-')
-            ->addColumn('course', fn ($row) => $row->course->name ?? '-')
-            ->addColumn('branch', fn ($row) => $row->branch->name ?? '-')
-            // ->addColumn('semester', fn ($row) => $row->semester->name ?? '-')
+    
+            ->addColumn('father', function ($row) {
+                return e($row->father_name ?? '-');
+            })
+    
+            ->addColumn('university_roll', function ($row) {
+                return e($row->university_roll_no ?? '-');
+            })
+    
+            ->addColumn('course', function ($row) {
+                return e($row->course->name ?? '-');
+            })
+    
+            ->addColumn('branch', function ($row) {
+                return e($row->branch->name ?? '-');
+            })
+    
             ->addColumn('semester', function ($row) {
-                // Fallbacks if course_type missing or null
-                if (isset($row->course) && $row->course->course_type === 'Semester Based') {
-                    return $row->semester->name ?? '-';
-                } elseif (isset($row->course) && $row->course->course_type === 'Annual Based') {
-                    return $row->annual_semester->name ?? '-';
+    
+                if (
+                    isset($row->course) &&
+                    $row->course->course_type === 'Semester Based'
+                ) {
+                    return e($row->semester->name ?? '-');
                 }
-
-                // If course_type is missing, try to infer
-                return $row->semester->name ?? $row->annual_semester->name ?? '-';
+    
+                if (
+                    isset($row->course) &&
+                    $row->course->course_type === 'Annual Based'
+                ) {
+                    return e($row->annual_semester->name ?? '-');
+                }
+    
+                return e(
+                    $row->semester->name ??
+                    $row->annual_semester->name ??
+                    '-'
+                );
             })
-            ->addColumn('scheme', fn ($row) => $row->scheme->name ?? '-')
-            ->addColumn('batch', fn ($row) => $row->batch->name ?? '-')
-            ->addColumn('institute', fn ($row) => $row->institute->name ?? '-')
-            ->addColumn('phone', fn ($row) => $row->phone ?? '-')
-
+    
+            ->addColumn('scheme', function ($row) {
+                return e($row->scheme->name ?? '-');
+            })
+    
+            ->addColumn('batch', function ($row) {
+                return e($row->batch->name ?? '-');
+            })
+    
+            ->addColumn('institute', function ($row) {
+                return e($row->institute->name ?? '-');
+            })
+    
+            ->addColumn('phone', function ($row) {
+                return e($row->phone ?? '-');
+            })
+    
             ->addColumn('status', function ($row) {
                 return $row->pursuing_status === 'yes'
                     ? '<span class="badge bg-info">Pursuing</span>'
                     : '<span class="badge bg-success">Complete</span>';
             })
-
+    
+            // =========================================
+            // CHECKBOX + SERIAL NUMBER
+            // =========================================
             ->addColumn('checkbox', function ($row) {
+    
+                static $num = 0;
+                $num++;
+    
                 return '
-                    <div class="d-flex align-items-center">
-                        <input type="checkbox" class="student_checkbox me-2" value="'.$row->id.'">
-                        <span>'.$row->DT_RowIndex.'</span>
+                    <div class="d-flex align-items-center gap-2">
+                        <input
+                            type="checkbox"
+                            class="student_checkbox"
+                            value="' . (int) $row->id . '"
+                        >
+                        <span>' . $num . '</span>
                     </div>
                 ';
             })
-
-
+    
+            // =========================================
+            // ACTION DROPDOWN
+            // =========================================
             ->addColumn('action', function ($row) {
+    
+                $editUrl = route('institute.students.edit', $row->id);
+                $deleteUrl = route('institute.students.destroy', $row->id);
+    
                 return '
-                <div class="dropdown">
-                    <button class="btn btn-sm btn-light dropdown-toggle" type="button"
-                        id="actionDropdown'.$row->id.'"
-                        data-bs-toggle="dropdown"
-                        aria-expanded="false">
-                        <i class="mdi mdi-dots-vertical fs-16"></i>
-                    </button>
-
-                    <ul class="dropdown-menu dropdown-menu-end"
-                        aria-labelledby="actionDropdown'.$row->id.'">
-
-                        <li>
-                            <a class="dropdown-item" href="'.route('institute.students.edit', $row->id).'">
-                                <i class="mdi mdi-pencil-outline me-2 text-primary"></i> Edit
-                            </a>
-                        </li>
-
-                        <li>
-                            <form action="'.route('institute.students.destroy', $row->id).'"
-                                method="POST"
-                                class="d-inline delete-form">
-                                '.csrf_field().'
-                                '.method_field('DELETE').'
-                                <button type="submit" class="dropdown-item text-danger"
-                                    onclick="return confirm(\'Are you sure you want to delete this student?\')">
-                                    <i class="mdi mdi-delete-outline me-2"></i> Delete
-                                </button>
-                            </form>
-                        </li>
-
-                    </ul>
-                </div>';
+                    <div class="dropdown">
+                        <button
+                            class="btn btn-sm btn-light dropdown-toggle"
+                            type="button"
+                            id="actionDropdown' . (int) $row->id . '"
+                            data-bs-toggle="dropdown"
+                            aria-expanded="false"
+                        >
+                            <i class="mdi mdi-dots-vertical fs-16"></i>
+                        </button>
+    
+                        <ul
+                            class="dropdown-menu dropdown-menu-end"
+                            aria-labelledby="actionDropdown' . (int) $row->id . '"
+                        >
+                            <li>
+                                <a class="dropdown-item"
+                                   href="' . $editUrl . '">
+                                    <i class="mdi mdi-pencil-outline me-2 text-primary"></i>
+                                    Edit
+                                </a>
+                            </li>
+    
+                            <li>
+                                <form action="' . $deleteUrl . '"
+                                      method="POST"
+                                      class="d-inline delete-form">
+                                    ' . csrf_field() . '
+                                    ' . method_field('DELETE') . '
+    
+                                    <button type="submit"
+                                            class="dropdown-item text-danger"
+                                            onclick="return confirm(\'Are you sure you want to delete this student?\')">
+                                        <i class="mdi mdi-delete-outline me-2"></i>
+                                        Delete
+                                    </button>
+                                </form>
+                            </li>
+                        </ul>
+                    </div>
+                ';
             })
-
-            ->rawColumns(['checkbox','student', 'status', 'action'])
+    
+            ->rawColumns([
+                'checkbox',
+                'student',
+                'status',
+                'action'
+            ])
+    
             ->make(true);
     }
 
+    // public function data()
+    // {
+    //     $authUser = auth('institute')->user();
+
+       
+    //     $institute_id = $authUser->account_type === 'institute'
+    //                         ? $authUser->id
+    //                         : $authUser->institute_id;
+
+    //     $students = Student::with([
+    //         'course',
+    //         'branch',
+    //         'semester',
+    //         'annual_semester',
+    //         'scheme',
+    //         'batch',
+    //         'institute'
+    //     ])->where('students.institute_id', $institute_id)
+    //     ->select('students.*')
+    //     ->orderBy('students.institute_id')
+    //     ->orderBy('students.course_id')
+    //     ->orderBy('students.branch_id')
+    //     ->orderBy('students.semester_id')
+    //     ->orderBy('students.annual_semester_id')
+    //     ->orderBy('students.scheme_id')
+    //     ->orderBy('students.scheme_id')
+    //     ->orderByDesc('students.batch_id');
+
+    //     return DataTables::of($students)
+    //         ->addIndexColumn()
+
+    //         ->addColumn('student', function ($row) {
+    //             return '<strong>'.$row->student_name.'</strong><br>
+    //                     <small class="text-primary">Reg: '.$row->reg_no.'</small>';
+    //         })
+
+    //         ->addColumn('father', fn ($row) => $row->father_name ?? '-')
+    //         ->addColumn('university_roll', fn ($row) => $row->university_roll_no ?? '-')
+    //         ->addColumn('course', fn ($row) => $row->course->name ?? '-')
+    //         ->addColumn('branch', fn ($row) => $row->branch->name ?? '-')
+    //         // ->addColumn('semester', fn ($row) => $row->semester->name ?? '-')
+    //         ->addColumn('semester', function ($row) {
+    //             // Fallbacks if course_type missing or null
+    //             if (isset($row->course) && $row->course->course_type === 'Semester Based') {
+    //                 return $row->semester->name ?? '-';
+    //             } elseif (isset($row->course) && $row->course->course_type === 'Annual Based') {
+    //                 return $row->annual_semester->name ?? '-';
+    //             }
+
+                
+    //             return $row->semester->name ?? $row->annual_semester->name ?? '-';
+    //         })
+    //         ->addColumn('scheme', fn ($row) => $row->scheme->name ?? '-')
+    //         ->addColumn('batch', fn ($row) => $row->batch->name ?? '-')
+    //         ->addColumn('institute', fn ($row) => $row->institute->name ?? '-')
+    //         ->addColumn('phone', fn ($row) => $row->phone ?? '-')
+
+    //         ->addColumn('status', function ($row) {
+    //             return $row->pursuing_status === 'yes'
+    //                 ? '<span class="badge bg-info">Pursuing</span>'
+    //                 : '<span class="badge bg-success">Complete</span>';
+    //         })
+
+    //         ->addColumn('checkbox', function ($row) {
+    //             return '
+    //                 <div class="d-flex align-items-center">
+    //                     <input type="checkbox" class="student_checkbox me-2" value="'.$row->id.'">
+    //                     <span>'.$row->DT_RowIndex.'</span>
+    //                 </div>
+    //             ';
+    //         })
+
+
+    //         ->addColumn('action', function ($row) {
+    //             return '
+    //             <div class="dropdown">
+    //                 <button class="btn btn-sm btn-light dropdown-toggle" type="button"
+    //                     id="actionDropdown'.$row->id.'"
+    //                     data-bs-toggle="dropdown"
+    //                     aria-expanded="false">
+    //                     <i class="mdi mdi-dots-vertical fs-16"></i>
+    //                 </button>
+
+    //                 <ul class="dropdown-menu dropdown-menu-end"
+    //                     aria-labelledby="actionDropdown'.$row->id.'">
+
+    //                     <li>
+    //                         <a class="dropdown-item" href="'.route('institute.students.edit', $row->id).'">
+    //                             <i class="mdi mdi-pencil-outline me-2 text-primary"></i> Edit
+    //                         </a>
+    //                     </li>
+
+    //                     <li>
+    //                         <form action="'.route('institute.students.destroy', $row->id).'"
+    //                             method="POST"
+    //                             class="d-inline delete-form">
+    //                             '.csrf_field().'
+    //                             '.method_field('DELETE').'
+    //                             <button type="submit" class="dropdown-item text-danger"
+    //                                 onclick="return confirm(\'Are you sure you want to delete this student?\')">
+    //                                 <i class="mdi mdi-delete-outline me-2"></i> Delete
+    //                             </button>
+    //                         </form>
+    //                     </li>
+
+    //                 </ul>
+    //             </div>';
+    //         })
+
+    //         ->rawColumns(['checkbox','student', 'status', 'action'])
+    //         ->make(true);
+    // }
+
     public function create()
     {
+        $user = auth('institute')->user();
+        $institute_id = $user->account_type === 'institute'
+                            ? $user->id
+                            : $user->institute_id;
+        $courses = Course::whereHas('institutes', function ($q) use ($institute_id) {
+            $q->where('institutes.id', $institute_id);
+        })->get();
         return view('institute.students.create',[
-            'courses' => Course::all(),
+            'courses' => $courses,
             'institutes' => Institute::all()
         ]);
     }
@@ -295,6 +615,13 @@ class StudentController extends Controller
 
     public function edit(string $id)
     {
+        $user = auth('institute')->user();
+        $institute_id = $user->account_type === 'institute'
+                            ? $user->id
+                            : $user->institute_id;
+        $courses = Course::whereHas('institutes', function ($q) use ($institute_id) {
+            $q->where('institutes.id', $institute_id);
+        })->get();
         $student = Student::with([
             'course',
             'branch',
@@ -306,7 +633,7 @@ class StudentController extends Controller
         ])->findOrFail($id);
 
         return view('institute.students.edit', [
-            'courses' => Course::all(),
+            'courses' => $courses,
             'student' => $student
         ]);
     }

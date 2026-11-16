@@ -37,7 +37,7 @@
                                 </button>
                             </li>
 
-                            <li class="dropdown notification-list topbar-dropdown">
+                            {{--<li class="dropdown notification-list topbar-dropdown">
                                 <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-haspopup="false" aria-expanded="false">
                                     <i data-feather="bell" class="noti-icon"></i>
                                     <span class="badge bg-danger rounded-circle noti-icon-badge">9</span>
@@ -72,12 +72,12 @@
                                         <i class="fe-arrow-right"></i>
                                     </a>
                                 </div>
-                            </li>
+                            </li>--}}
 
                             <!-- User Dropdown -->
                             <li class="dropdown notification-list topbar-dropdown">
                                 <a class="nav-link dropdown-toggle nav-user me-0" data-bs-toggle="dropdown" href="#" role="button" aria-haspopup="false" aria-expanded="false">
-                                    <img src="{{ asset('assets/images/hptu-logo.png') }}" alt="user-image" class="rounded-circle" />
+                                    <img src="{{ asset('assets/images/users/user-13.jpg') }}" alt="user-image" class="rounded-circle" />
                                     <span class="pro-user-name ms-1">{{ auth('institute')->user()->sort_name ?? 'Institute' }} <i class="mdi mdi-chevron-down"></i></span>
                                 </a>
                                 <div class="dropdown-menu dropdown-menu-end profile-dropdown">

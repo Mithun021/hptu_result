@@ -2,6 +2,11 @@
 @section('title', 'Students')
 @section('sub_title', 'Manage Students')
 @section('institute-content')
+<style>
+#studentOffcanvasTop .offcanvas-body {
+    min-height: 200px;
+}
+</style>
 <div class="row">
     <div class="col-12">
         <div class="card">
@@ -17,6 +22,79 @@
                         <i data-feather="plus-circle" style="width:14px; height:14px;" class="me-1"></i>
                         Create New
                     </a>
+
+                    <button type="button" class="btn btn-sm btn-warning" data-bs-toggle="offcanvas" data-bs-target="#studentOffcanvasTop">
+                        <i data-feather="filter" style="width:14px; height:14px;"></i>
+                    </button>
+
+                    <div class="offcanvas offcanvas-top" tabindex="-1" id="studentOffcanvasTop" aria-labelledby="studentOffcanvasTopLabel">
+                        <div class="offcanvas-header">
+                            <h5 id="studentOffcanvasTopLabel">Search Student</h5>
+                            <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+                        </div>
+                        <div class="offcanvas-body card">
+                            <form id="studentSearchForm">
+                                <div class="row">
+                                    <div class="col-md-2 form-group mb-2">
+                                        <label for="student_roll_number">Student Roll Number</label>
+                                        <input type="text" name="student_roll_number" id="student_roll_number" class="form-control">
+                                    </div>
+                                    <div class="col-md-2 form-group mb-2">
+                                        <label for="course_type">Course Type</label>
+                                        <select name="course_type" id="course_type" class="form-control">
+                                            <option value="">--Select--</option>
+                                            <option value="Annual Based">Annual Based</option>
+                                            <option value="Semester Based">Semester Based</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2 form-group mb-2">
+                                        <label for="course_id">Select Course</label>
+                                        <select name="course_id" id="course_id" class="form-control">
+                                            <option value="">--Select--</option>
+                                        @foreach ($courses as $course)
+                                            <option value="{{ $course->id }}">{{ $course->name }}</option>
+                                        @endforeach
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2 form-group mb-2">
+                                        <label for="scheme_id">Select Scheme</label>
+                                        <select name="scheme_id" id="scheme_id" class="form-control">
+                                            <option value="">--Select--</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2 form-group mb-2">
+                                        <label for="branch_id">Select Branch</label>
+                                        <select name="branch_id" id="branch_id" class="form-control">
+                                            <option value="">--Select--</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2 form-group mb-2" id="semester_container"  style="display: none;">
+                                        <label for="semester_id">Select Semester</label>
+                                        <select name="semester_id" id="semester_id" class="form-control">
+                                            <option value="">--Select--</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2 form-group mb-2" id="annual_semester_container"  style="display: none;">
+                                        <label for="annual_semester_id">Select Annual Terms</label>
+                                        <select name="annual_semester_id" id="annual_semester_id" class="form-control">
+                                            <option value="">--Select--</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2 form-group mb-2">
+                                        <label>Session / Batch </label>
+                                        <select name="batch_id" id="batch_id" class="form-control">
+                                            <option value="">--Select--</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2 form-group mt-3 mb-2">
+                                        <button type="button" id="searchStudent" class="btn btn-primary">Filter Student</button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+
                 </div>
             </div>
             <div class="card-body">
@@ -75,7 +153,7 @@
                         <li><strong>Upload CSV files only.</strong> Other file formats are not supported.</li>
 
                         <li>
-                            <strong>Do not modify the column headers.</strong>  
+                            <strong>Do not modify the column headers.</strong>
                             The first row of the CSV file must exactly match the following order:
                             <br>
                             <code>
@@ -152,8 +230,8 @@
                         <div class="card mb-3">
                             <div class="card-body d-flex justify-content-between align-items-center">
                                 <h5 class="card-title mb-0">Download Sample CSV</h5>
-                                <a href="{{ asset('assets/sample/students.csv') }}" 
-                                class="btn btn-primary" 
+                                <a href="{{ asset('assets/sample/students.csv') }}"
+                                class="btn btn-primary"
                                 download="student_sample.csv">
                                     <i class="mdi mdi-download me-1"></i> Download
                                 </a>
@@ -175,67 +253,486 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
-                <button type="submit" class="btn btn-primary">Import Subject</button>
+                <button type="submit" class="btn btn-primary">Import Student</button>
             </div>
             </form>
         </div>
     </div>
 </div>
 
-<script src="{{ asset('assets/libs/jquery/jquery.min.js') }}"></script> 
+<script src="{{ asset('assets/libs/jquery/jquery.min.js') }}"></script>
+
 <script>
-    $(function () {
+$(document).ready(function () {
 
-        $('.yajra-datatable').DataTable({
-            processing: true,
-            serverSide: true,
-            ajax: "{{ route('institute.students.data') }}",
+    function resetSemesterUI() {
+        $('#semester_container').hide();
+        $('#annual_semester_container').hide();
 
-            columns: [
-                { data: 'checkbox', orderable: false, searchable: false },
-                { data: 'student', name: 'student_name' },
-                { data: 'father', name: 'father_name' },
-                { data: 'university_roll', name: 'university_roll_no' },
-                { data: 'course', name: 'course.name' },
-                { data: 'branch', name: 'branch.name' },
-                { data: 'semester', name: 'semester.name' },
-                { data: 'scheme', name: 'scheme.name' },
-                { data: 'batch', name: 'batch.name' },
-                { data: 'institute', name: 'institute.name' },
-                { data: 'phone', name: 'phone' },
-                { data: 'status', orderable: false, searchable: false },
-                { data: 'action', orderable: false, searchable: false }
-            ],
+        $('#semester_id').html('<option value="">--Select Semester--</option>');
+        $('#annual_semester_id').html('<option value="">--Select--</option>');
+    }
 
-            order: [[1, 'asc']],
+    function loadCourseData(courseId) {
+        if (!courseId) return;
 
-            lengthMenu: AppDataTable.lengthMenu,
-            pageLength: AppDataTable.pageLength,
-            dom: AppDataTable.dom,
-            buttons: AppDataTable.buttons,
-            drawCallback: AppDataTable.drawCallback
+        resetSemesterUI();
+
+        /* =========================
+           LOADERS
+        ==========================*/
+        $('#branch_id').html('<option>Please wait...</option>');
+        $('#scheme_id').html('<option>Please wait...</option>');
+        $('#batch_id').html('<option>Please wait...</option>');
+        $('#institute_id').html('<option>Please wait...</option>');
+
+        /* =========================
+           FETCH BRANCHES
+        ==========================*/
+        $.get("{{ url('branches') }}/" + courseId, function (branches) {
+            $('#branch_id').html('<option value="">--Select Branch--</option>');
+            $.each(branches, function (_, branch) {
+                $('#branch_id').append(
+                    `<option value="${branch.id}">${branch.name}</option>`
+                );
+            });
         });
 
+        /* =========================
+           FETCH COURSE DETAILS
+        ==========================*/
+        $.get("{{ url('courses') }}/" + courseId + "/details", function (response) {
+
+            /* ---------- Schemes ---------- */
+            $('#scheme_id').html('<option value="">--Select Scheme--</option>');
+            $.each(response.schemes, function (_, scheme) {
+                $('#scheme_id').append(
+                    `<option value="${scheme.id}">${scheme.name}</option>`
+                );
+            });
+
+            /* ---------- Batches ---------- */
+            $('#batch_id').html('<option value="">--Select Batch--</option>');
+            $.each(response.batches, function (_, batch) {
+                $('#batch_id').append(
+                    `<option value="${batch.id}">${batch.name}</option>`
+                );
+            });
+
+            /* ---------- Institutes ---------- */
+            $('#institute_id').html('<option value="">--Select Institute--</option>');
+            $.each(response.institutes, function (_, institute) {
+                $('#institute_id').append(
+                    `<option value="${institute.id}">${institute.name}</option>`
+                );
+            });
+
+            let courseType = $('#course_type').val();
+
+            /* =========================
+               SEMESTER BASED
+            ==========================*/
+            if (courseType === 'Semester Based') {
+                $('#semester_container').show();
+                $('#annual_semester_container').hide();
+
+                $('#semester_id').html('<option value="">--Select Semester--</option>');
+                $.each(response.semesters, function (_, semester) {
+                    $('#semester_id').append(
+                        `<option value="${semester.id}">${semester.name}</option>`
+                    );
+                });
+            }
+
+            /* =========================
+               ANNUAL BASED
+            ==========================*/
+            if (courseType === 'Annual Based') {
+                $('#annual_semester_container').show();
+                $('#semester_container').hide();
+
+                $('#annual_semester_id').html('<option value="">--Select--</option>');
+                $.each(response.annual_semesters, function (_, annual) {
+                    $('#annual_semester_id').append(
+                        `<option value="${annual.id}">${annual.name}</option>`
+                    );
+                });
+            }
+        });
+    }
+
+    /* =========================
+       COURSE CHANGE
+    ==========================*/
+    $('#course_id').on('change', function () {
+        loadCourseData($(this).val());
     });
 
-    // promot student ---------------------
-    // Select all
-    $(document).on('click', '#select_all', function () {
-        $('.student_checkbox').prop('checked', this.checked);
-    });
-
-    // Individual uncheck sync
-    $(document).on('change', '.student_checkbox', function () {
-        if (!this.checked) {
-            $('#select_all').prop('checked', false);
+    /* =========================
+       COURSE TYPE CHANGE
+    ==========================*/
+    $('#course_type').on('change', function () {
+        resetSemesterUI();
+        let courseId = $('#course_id').val();
+        if (courseId) {
+            loadCourseData(courseId);
         }
     });
 
+    /* =========================
+       AUTO LOAD (EDIT / OLD)
+    ==========================*/
+    let defaultCourse = $('#course_id').val();
+    let defaultType   = $('#course_type').val();
 
-    $('#promote_students').click(function () {
+    if (defaultCourse && defaultType) {
+        loadCourseData(defaultCourse);
+    }
 
-        let btn = $(this);
-        let ids = [];
+});
+</script>
+
+
+<script>
+$(document).ready(function () {
+
+    const tableSelector = '.yajra-datatable';
+
+    // =========================================
+    // HELPER: Reset dependent dropdowns
+    // =========================================
+    function resetSelect(selector, placeholder) {
+        $(selector).html(
+            $('<option>', {
+                value: '',
+                text: placeholder || '--Select--'
+            })
+        );
+    }
+
+    function resetSemesterUI() {
+        $('#semester_container').hide();
+        $('#annual_semester_container').hide();
+
+        resetSelect('#semester_id', '--Select Semester--');
+        resetSelect('#annual_semester_id', '--Select Annual Term--');
+    }
+
+    function resetCourseData() {
+        resetSelect('#branch_id', '--Select Branch--');
+        resetSelect('#scheme_id', '--Select Scheme--');
+        resetSelect('#batch_id', '--Select Batch--');
+        resetSemesterUI();
+    }
+
+    // =========================================
+    // HELPER: Populate dropdown safely
+    // =========================================
+    function populateSelect(selector, items, placeholder) {
+        resetSelect(selector, placeholder);
+
+        $.each(items || [], function (_, item) {
+            $(selector).append(
+                $('<option>', {
+                    value: item.id,
+                    text: item.name
+                })
+            );
+        });
+    }
+
+    // =========================================
+    // LOAD COURSE DATA
+    // =========================================
+    let courseRequest = null;
+
+    function loadCourseData(courseId) {
+
+        if (courseRequest) {
+            courseRequest.abort();
+            courseRequest = null;
+        }
+
+        resetCourseData();
+
+        if (!courseId) {
+            return;
+        }
+
+        $('#branch_id, #scheme_id, #batch_id').html(
+            '<option value="">Please wait...</option>'
+        );
+
+        const courseType = $('#course_type').val();
+
+        courseRequest = $.get(
+            "{{ url('courses') }}/" + encodeURIComponent(courseId) + "/details"
+        )
+        .done(function (response) {
+
+            // Branches are fetched separately below.
+            populateSelect(
+                '#scheme_id',
+                response.schemes,
+                '--Select Scheme--'
+            );
+
+            populateSelect(
+                '#batch_id',
+                response.batches,
+                '--Select Batch--'
+            );
+
+            if (courseType === 'Semester Based') {
+
+                $('#semester_container').show();
+
+                populateSelect(
+                    '#semester_id',
+                    response.semesters,
+                    '--Select Semester--'
+                );
+
+            } else if (courseType === 'Annual Based') {
+
+                $('#annual_semester_container').show();
+
+                populateSelect(
+                    '#annual_semester_id',
+                    response.annual_semesters,
+                    '--Select Annual Term--'
+                );
+            }
+        })
+        .fail(function (xhr, status) {
+            if (status !== 'abort') {
+                resetSelect('#scheme_id', '--Select Scheme--');
+                resetSelect('#batch_id', '--Select Batch--');
+
+                console.error('Unable to load course details.', xhr);
+            }
+        })
+        .always(function () {
+            courseRequest = null;
+        });
+
+        // Fetch branches
+        $.get(
+            "{{ url('branches') }}/" + encodeURIComponent(courseId)
+        )
+        .done(function (branches) {
+            populateSelect(
+                '#branch_id',
+                branches,
+                '--Select Branch--'
+            );
+        })
+        .fail(function () {
+            resetSelect('#branch_id', '--Select Branch--');
+        });
+    }
+
+    // =========================================
+    // COURSE TYPE CHANGE
+    // =========================================
+    $('#course_type').on('change', function () {
+
+        resetSemesterUI();
+
+        const courseId = $('#course_id').val();
+
+        if (courseId) {
+            loadCourseData(courseId);
+        } else {
+            resetCourseData();
+        }
+    });
+
+    // =========================================
+    // COURSE CHANGE
+    // =========================================
+    $('#course_id').on('change', function () {
+
+        const courseId = $(this).val();
+
+        if (courseId) {
+            loadCourseData(courseId);
+        } else {
+            resetCourseData();
+        }
+    });
+
+    // =========================================
+    // DATATABLE INITIALIZATION
+    // =========================================
+    const studentTable = $(tableSelector).DataTable({
+
+        processing: true,
+        serverSide: true,
+        deferRender: true,
+
+        ajax: {
+            url: "{{ route('institute.students.data') }}",
+            type: 'GET',
+
+            // Filter values are sent with every DataTable request.
+            // Institute ID is deliberately NOT sent by the browser.
+            data: function (d) {
+
+                $('#studentSearchForm').serializeArray().forEach(
+                    function (field) {
+                        d[field.name] = field.value;
+                    }
+                );
+            },
+
+            error: function (xhr) {
+                console.error('Student list request failed:', xhr);
+            }
+        },
+
+        columns: [
+            {
+                data: 'checkbox',
+                name: 'id',
+                orderable: false,
+                searchable: false
+            },
+            {
+                data: 'student',
+                name: 'student_name'
+            },
+            {
+                data: 'father',
+                name: 'father_name'
+            },
+            {
+                data: 'university_roll',
+                name: 'university_roll_no'
+            },
+            {
+                data: 'course',
+                name: 'course.name',
+                orderable: false,
+                searchable: false
+            },
+            {
+                data: 'branch',
+                name: 'branch.name',
+                orderable: false,
+                searchable: false
+            },
+            {
+                data: 'semester',
+                name: 'semester',
+                orderable: false,
+                searchable: false
+            },
+            {
+                data: 'scheme',
+                name: 'scheme.name',
+                orderable: false,
+                searchable: false
+            },
+            {
+                data: 'batch',
+                name: 'batch.name',
+                orderable: false,
+                searchable: false
+            },
+            {
+                data: 'institute',
+                name: 'institute.name',
+                orderable: false,
+                searchable: false
+            },
+            {
+                data: 'phone',
+                name: 'phone'
+            },
+            {
+                data: 'status',
+                orderable: false,
+                searchable: false
+            },
+            {
+                data: 'action',
+                orderable: false,
+                searchable: false
+            }
+        ],
+
+        // Preserve the custom ordering defined in the controller.
+        order: [],
+
+        lengthMenu: AppDataTable.lengthMenu,
+        pageLength: AppDataTable.pageLength,
+        dom: AppDataTable.dom,
+        buttons: AppDataTable.buttons,
+        drawCallback: AppDataTable.drawCallback
+    });
+
+    // =========================================
+    // APPLY FILTER
+    // =========================================
+    $('#searchStudent').on('click', function () {
+        studentTable.ajax.reload(null, true);
+
+        const offcanvasElement = document.getElementById(
+            'studentOffcanvasTop'
+        );
+
+        if (
+            offcanvasElement &&
+            window.bootstrap &&
+            bootstrap.Offcanvas
+        ) {
+            const instance =
+                bootstrap.Offcanvas.getInstance(offcanvasElement);
+
+            if (instance) {
+                instance.hide();
+            }
+        }
+    });
+
+    // Enter key also applies filters.
+    $('#studentSearchForm').on('submit', function (e) {
+        e.preventDefault();
+        $('#searchStudent').trigger('click');
+    });
+
+    // =========================================
+    // SELECT ALL STUDENTS ON CURRENT PAGE
+    // =========================================
+    $('#select_all').on('change', function () {
+        $('.student_checkbox').prop('checked', this.checked);
+    });
+
+    // Sync header checkbox after DataTable redraw.
+    $(tableSelector).on('draw.dt', function () {
+        $('#select_all').prop('checked', false);
+    });
+
+    // If any student is unchecked, clear Select All.
+    $(document).on('change', '.student_checkbox', function () {
+
+        const total = $('.student_checkbox').length;
+        const checked = $('.student_checkbox:checked').length;
+
+        $('#select_all').prop(
+            'checked',
+            total > 0 && total === checked
+        );
+    });
+
+    // =========================================
+    // PROMOTE SELECTED STUDENTS
+    // =========================================
+    $('#promote_students').on('click', function () {
+
+        const btn = $(this);
+        const ids = [];
 
         $('.student_checkbox:checked').each(function () {
             ids.push($(this).val());
@@ -243,29 +740,33 @@
 
         if (ids.length === 0) {
             Toastify({
-                text: "Please select at least one student",
+                text: 'Please select at least one student',
                 duration: 3000,
-                gravity: "top",
-                position: "right",
-                backgroundColor: "#dc3545",
+                gravity: 'top',
+                position: 'right',
+                backgroundColor: '#dc3545'
             }).showToast();
+
             return;
         }
 
-        // Confirm Dialog
-        if (!confirm('Are you sure you want to move selected students to next semester/year?')) {
+        if (
+            !confirm(
+                'Are you sure you want to move selected students to the next semester/year?'
+            )
+        ) {
             return;
         }
 
         $.ajax({
             url: "{{ route('institute.students.promote') }}",
-            type: "POST",
+            type: 'POST',
+
             data: {
                 _token: "{{ csrf_token() }}",
                 ids: ids
             },
 
-            // Before Send (Button Disable + Loader Text)
             beforeSend: function () {
                 btn.prop('disabled', true);
                 btn.data('original-text', btn.html());
@@ -275,87 +776,49 @@
             success: function (res) {
 
                 Toastify({
-                    text: res.message,
+                    text: res.message || 'Students promoted successfully.',
                     duration: 3000,
-                    gravity: "top",
-                    position: "right",
-                    backgroundColor: "#28a745",
+                    gravity: 'top',
+                    position: 'right',
+                    backgroundColor: '#28a745'
                 }).showToast();
 
-                $('.yajra-datatable').DataTable().ajax.reload();
+                studentTable.ajax.reload(null, false);
+                $('#select_all').prop('checked', false);
             },
 
-            error: function () {
+            error: function (xhr) {
+
+                const message =
+                    xhr.responseJSON?.message ||
+                    'Something went wrong!';
+
                 Toastify({
-                    text: "Something went wrong!",
+                    text: message,
                     duration: 3000,
-                    gravity: "top",
-                    position: "right",
-                    backgroundColor: "#dc3545",
+                    gravity: 'top',
+                    position: 'right',
+                    backgroundColor: '#dc3545'
                 }).showToast();
             },
 
-            // ✅ Always (restore button)
             complete: function () {
                 btn.prop('disabled', false);
                 btn.html(btn.data('original-text'));
             }
         });
-
     });
 
-    // $('#promote_students').click(function () {
-        
-    //     let ids = [];
+    // =========================================
+    // INITIAL DROPDOWN STATE
+    // =========================================
+    const defaultCourse = $('#course_id').val();
 
-    //     $('.student_checkbox:checked').each(function () {
-    //         ids.push($(this).val());
-    //     });
+    if (defaultCourse) {
+        loadCourseData(defaultCourse);
+    }
 
-    //     if (ids.length === 0) {
-    //         Toastify({
-    //             text: "Please select at least one student",
-    //             duration: 3000,
-    //             gravity: "top",
-    //             position: "right",
-    //             backgroundColor: "#dc3545", // red
-    //         }).showToast();
-    //         return;
-    //     }
-
-    //     $.ajax({
-    //         url: "{{ route('institute.students.promote') }}",
-    //         type: "POST",
-    //         data: {
-    //             _token: "{{ csrf_token() }}",
-    //             ids: ids
-    //         },
-    //         success: function (res) {
-
-    //             Toastify({
-    //                 text: res.message,
-    //                 duration: 3000,
-    //                 gravity: "top",
-    //                 position: "right",
-    //                 backgroundColor: "#28a745", // green
-    //             }).showToast();
-
-    //             $('.yajra-datatable').DataTable().ajax.reload();
-    //         },
-
-    //         error: function () {
-    //             Toastify({
-    //                 text: "Something went wrong!",
-    //                 duration: 3000,
-    //                 gravity: "top",
-    //                 position: "right",
-    //                 backgroundColor: "#dc3545",
-    //             }).showToast();
-    //         }
-    //     });
-
-    // });
-
+});
 </script>
 
 @endsection

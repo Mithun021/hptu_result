@@ -172,8 +172,8 @@ class MidSemMarksController extends Controller
             ->where('course_type', $request->course_type)
             ->where('course_id', $request->course_id)
             ->where('branch_id', $request->branch_id)
-            ->where('institute_id' , $instituteId)
-            ->where('batch_id', $request->batch_id);
+            ->where('institute_id' , $instituteId);
+            // ->where('batch_id', $request->batch_id);
 
         if ($request->scheme_id) {
             $students->where('scheme_id', $request->scheme_id);
@@ -184,6 +184,11 @@ class MidSemMarksController extends Controller
         // } else {
         //     $students->where('annual_semester_id', $request->annual_semester_id);
         // }
+        
+        $students->orderByRaw("
+            CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(university_roll_no, '-', 2), '-', -1) AS UNSIGNED) ASC,
+            CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(university_roll_no, '-', 4), '-', -1) AS UNSIGNED) ASC
+        ");
 
         $students = $students->get();
 
@@ -240,6 +245,16 @@ class MidSemMarksController extends Controller
         }
 
         $allMarks = $marksQuery->get()->keyBy('student_id');
+        /*
+        ================================
+        FILTER STUDENTS BASED ON
+        SELECTED BATCH MARKS
+        ================================
+        */
+        $studentIds = $allMarks->keys()->toArray();
+        $students = $students
+            ->whereIn('id', $studentIds)
+            ->values();
 
         /**
          * ✅ SUBJECT ENROLLMENT

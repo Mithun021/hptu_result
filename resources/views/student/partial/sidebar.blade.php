@@ -37,26 +37,25 @@
 
                             <li class="menu-title">Academic</li>
                             <li>
-                                <a href="#master" data-bs-toggle="collapse">
+                                <a href="#examination" data-bs-toggle="collapse">
                                     <i data-feather="aperture"></i>
-                                    <span>Result </span>
+                                    <span>Examination Form </span>
                                     <span class="menu-arrow"></span>
                                 </a>
-                                <div class="collapse" id="master">
+                                <div class="collapse" id="examination">
                                     <ul class="nav-second-level">
-                                        <li><a href="{{ route('exams.index') }}" class="tp-link">Mid Sem Marks</a></li>
-                                        <li><a href="{{ route('pass-percentages.index') }}" class="tp-link">Internal Marks</a></li>
-                                        <li><a href="{{ route('marks-grades.index') }}" class="tp-link">External marks</a></li>
+                                        <li><a href="{{ route('student.examination-form.index') }}" class="tp-link">Fill Examination Form</a></li>
+                                        <li><a href="{{ route('pass-percentages.index') }}" class="tp-link">Form Records</a></li>
                                     </ul>
                                 </div>
                             </li>
 
-                            <li class="menu-title">Users</li>
+                            {{-- <li class="menu-title">Users</li> --}}
 
                             <li>
-                                <a href="#" class="tp-link">
-                                    <i data-feather="users"></i>
-                                    <span> Students </span>
+                                <a href="{{ route('student.verify-subjects.index') }}" class="tp-link">
+                                    <i data-feather="clipboard"></i>
+                                    <span> Verify Subjects </span>
                                 </a>
                             </li>
 

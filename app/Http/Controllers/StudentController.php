@@ -297,19 +297,19 @@ class StudentController extends Controller
         $student->semester_id = $request->semester_id;
         $student->annual_semester_id = $request->annual_semester_id;
         // $student->scheme_id = trim($request->scheme_id);
-        $student->scheme_id = $request->filled('scheme_id') 
-                        ? $request->scheme_id 
+        $student->scheme_id = $request->filled('scheme_id')
+                        ? $request->scheme_id
                         : null;
         $student->batch_id = trim($request->batch_id);
         $student->university_roll_no = trim($request->university_roll_no);
         $student->reg_no = trim($request->reg_no);
         // $student->admission_year = trim($request->admission_year);
-        $student->admission_year = $request->admission_year 
-        ? trim($request->admission_year) 
+        $student->admission_year = $request->admission_year
+        ? trim($request->admission_year)
         : null;
         // $student->completion_year = trim($request->completion_year);
-        $student->completion_year = $request->completion_year 
-        ? trim($request->completion_year) 
+        $student->completion_year = $request->completion_year
+        ? trim($request->completion_year)
         : null;
         $student->student_name = trim($request->student_name);
         $student->father_name = trim($request->father_name);
@@ -470,19 +470,19 @@ class StudentController extends Controller
         $student->semester_id = $request->semester_id;
         $student->annual_semester_id = $request->annual_semester_id;
         // $student->scheme_id = trim($request->scheme_id);
-        $student->scheme_id = $request->filled('scheme_id') 
-                        ? $request->scheme_id 
+        $student->scheme_id = $request->filled('scheme_id')
+                        ? $request->scheme_id
                         : null;
         $student->batch_id = trim($request->batch_id);
         $student->university_roll_no = trim($request->university_roll_no);
         $student->reg_no = trim($request->reg_no);
         // $student->admission_year = trim($request->admission_year);
-        $student->admission_year = $request->admission_year 
-        ? trim($request->admission_year) 
+        $student->admission_year = $request->admission_year
+        ? trim($request->admission_year)
         : null;
         // $student->completion_year = trim($request->completion_year);
-        $student->completion_year = $request->completion_year 
-        ? trim($request->completion_year) 
+        $student->completion_year = $request->completion_year
+        ? trim($request->completion_year)
         : null;
         $student->student_name = trim($request->student_name);
         $student->father_name = trim($request->father_name);
@@ -653,7 +653,7 @@ class StudentController extends Controller
     //     }
     // }
 
-    
+
 
     // public function importStudent(Request $request)
     // {
@@ -908,7 +908,7 @@ class StudentController extends Controller
 
                 // ✅ INSERT
                 Student::create([
-                    'course_type'    => trim($row['course_type'] ?? ''),
+                    'course_type'    => trim($row['course_type'] ?? 'Semester Based'),
                     'course_id'      => $course?->id,
                     'branch_id'      => $branch?->id,
                     'semester_id'    => $semester?->id ?? null,
@@ -940,7 +940,7 @@ class StudentController extends Controller
                     'profile_image'=> trim($row['profile_image'] ?? ''),
                     'signature'    => trim($row['signature'] ?? ''),
 
-                    'password'     => bcrypt("123456"),
+                    'password'     => "123456",
                 ]);
 
                 $insertCount++;

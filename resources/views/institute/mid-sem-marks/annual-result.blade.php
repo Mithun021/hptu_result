@@ -86,7 +86,12 @@
     </thead>
 
     <tbody>
+        @php $num = 0 @endphp
         @forelse($students as $key => $student)
+
+            @if(!in_array($student->id, $studentSubjects))
+                @continue
+            @endif
 
             @php
                 $marksRecord = $allMarks[$student->id] ?? null;
@@ -122,7 +127,7 @@
                     @endif  --}}
                 </td>
 
-                <td class="no-export">{{ $key + 1 }}</td>
+                <td class="no-export">{{ ++$num }}</td>
                 <td>{{ $student->student_name }}</td>
                 <td>{{ $student->university_roll_no }}</td>
                 <td>{{ $student->father_name }}</td>

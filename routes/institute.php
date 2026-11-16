@@ -19,7 +19,7 @@ Route::middleware(['institute.auth'])->prefix('institute')->group(function () {
         ->name('mid-sem-marks.data');
 
     Route::post('mid-sem-marks/save', [MidSemMarksController::class, 'saveMarks'])
-    ->name('mid-sem-marks.save'); 
+    ->name('mid-sem-marks.save');
 
     Route::post('mid-sem-marks/lock-unlock',[MidSemMarksController::class,'lockUnlock'])->name('mid-sem-marks.lock-unlock');
 
@@ -69,6 +69,8 @@ Route::middleware(['institute.auth'])->prefix('institute')->group(function () {
         Route::post('/student-subject/store', [StudentSubjectController::class, 'store'])->name('store');
         Route::get('/student-subject/list', [StudentSubjectController::class, 'list'])->name('list');
         Route::post('/student-subject/import', [StudentSubjectController::class, 'import'])->name('import');
+        Route::get('student-subjects/export-sample', [StudentSubjectController::class, 'exportSample'])
+        ->name('export-sample');
     });
 
 });

@@ -45,7 +45,7 @@ class StudentSubjectController extends Controller
 
     // public function render(Request $request)
     // {
-        
+
     //     $student = Student::where('university_roll_no', $request->roll_no)
     //         ->where('course_id', $request->course_id)
     //         ->where('branch_id', $request->branch_id)
@@ -98,21 +98,21 @@ class StudentSubjectController extends Controller
     //         'html' => $html
     //     ]);
     // }
-    
+
     public function render(Request $request)
     {
         $user = auth('institute')->user();
-    
+
         $instituteId = $user->account_type === 'institute'
             ? $user->id
             : $user->institute_id;
-    
+
         /*
         |--------------------------------------------------------------------------
         | STUDENTS
         |--------------------------------------------------------------------------
         */
-    
+
         $studentsQuery = Student::where('course_type', $request->course_type)
             ->where('course_id', $request->course_id)
             ->where('branch_id', $request->branch_id)
@@ -121,60 +121,60 @@ class StudentSubjectController extends Controller
             ->when($request->scheme_id, function ($q) use ($request) {
                 $q->where('scheme_id', $request->scheme_id);
             });
-    
+
         // Roll No supplied = Only one student
         // Roll No empty = All students
-    
+
         if (!empty(trim($request->roll_no ?? ''))) {
             $studentsQuery->where(
                 'university_roll_no',
                 trim($request->roll_no)
             );
         }
-    
+
         $students = $studentsQuery
             ->orderBy('university_roll_no')
             ->get();
-    
+
         if ($students->isEmpty()) {
             return response()->json([
                 'status' => false,
                 'message' => 'No students found.'
             ]);
         }
-    
+
         /*
         |--------------------------------------------------------------------------
         | SUBJECTS
         |--------------------------------------------------------------------------
         */
-    
+
         $subjectsQuery = Subject::where('course_id', $request->course_id)
             ->where('branch_id', $request->branch_id);
-    
+
         if ($request->scheme_id) {
             $subjectsQuery->where('scheme_id', $request->scheme_id);
         }
-    
+
         if ($request->course_type === 'Semester Based') {
-    
+
             $subjectsQuery->where('semester_id', $request->semester_id)
                 ->whereNull('annual_semester_id');
-    
+
         } else {
-    
+
             $subjectsQuery->where('annual_semester_id', $request->annual_semester_id)
                 ->whereNull('semester_id');
         }
-    
+
         $subjects = $subjectsQuery->get();
-    
+
         /*
         |--------------------------------------------------------------------------
         | SELECTED SUBJECTS OF ALL STUDENTS
         |--------------------------------------------------------------------------
         */
-    
+
         $selectedSubjects = StudentSubject::whereIn(
                 'student_id',
                 $students->pluck('id')
@@ -201,25 +201,25 @@ class StudentSubjectController extends Controller
             ->map(function ($items) {
                 return $items->pluck('subject_id')->toArray();
             });
-    
+
         /*
         |--------------------------------------------------------------------------
         | RENDER BLADE
         |--------------------------------------------------------------------------
         */
-    
+
         $html = view('institute.student-subject.student', compact(
             'students',
             'subjects',
             'selectedSubjects'
         ))->render();
-    
+
         return response()->json([
             'status' => true,
             'html' => $html
         ]);
     }
-    
+
     public function store(Request $request)
     {
         $request->validate([
@@ -229,23 +229,23 @@ class StudentSubjectController extends Controller
             'batch_id' => 'required',
             'student_subjects' => 'required|array',
         ]);
-    
+
         $user = auth('institute')->user();
-    
+
         $instituteId = $user->account_type === 'institute'
             ? $user->id
             : $user->institute_id;
-    
+
         DB::beginTransaction();
-    
+
         try {
-    
+
             /*
             |--------------------------------------------------------------------------
             | FETCH STUDENTS
             |--------------------------------------------------------------------------
             */
-    
+
             $studentsQuery = Student::where('course_type', $request->course_type)
                 ->where('course_id', $request->course_id)
                 ->where('branch_id', $request->branch_id)
@@ -254,80 +254,80 @@ class StudentSubjectController extends Controller
                 ->when($request->scheme_id, function ($q) use ($request) {
                     $q->where('scheme_id', $request->scheme_id);
                 });
-    
+
             if (!empty(trim($request->roll_no ?? ''))) {
                 $studentsQuery->where(
                     'university_roll_no',
                     trim($request->roll_no)
                 );
             }
-    
+
             $students = $studentsQuery->get();
-    
+
             if ($students->isEmpty()) {
                 throw new \Exception('No students found.');
             }
-    
+
             /*
             |--------------------------------------------------------------------------
             | VALIDATE AVAILABLE SUBJECTS
             |--------------------------------------------------------------------------
             */
-    
+
             $subjectsQuery = Subject::where('course_id', $request->course_id)
                 ->where('branch_id', $request->branch_id);
-    
+
             if ($request->scheme_id) {
                 $subjectsQuery->where('scheme_id', $request->scheme_id);
             }
-    
+
             if ($request->course_type === 'Semester Based') {
-    
+
                 $subjectsQuery->where('semester_id', $request->semester_id)
                     ->whereNull('annual_semester_id');
-    
+
             } else {
-    
+
                 $subjectsQuery->where('annual_semester_id', $request->annual_semester_id)
                     ->whereNull('semester_id');
             }
-    
+
             $availableSubjectIds = $subjectsQuery->pluck('id')
                 ->map(fn($id) => (string) $id)
                 ->toArray();
-    
+
             /*
             |--------------------------------------------------------------------------
             | SAVE EACH STUDENT SUBJECT SELECTION
             |--------------------------------------------------------------------------
             */
-    
+
             foreach ($students as $student) {
-    
+
                 $selectedSubjects = $request->input(
                     'student_subjects.' . $student->id,
                     []
                 );
-    
+
                 if (!is_array($selectedSubjects)) {
                     throw new \Exception('Invalid subject selection.');
                 }
-    
+
                 $selectedSubjects = array_unique(
                     array_map('strval', $selectedSubjects)
                 );
-    
+
                 // Check submitted subjects belong to selected course/term
                 if (!empty(array_diff($selectedSubjects, $availableSubjectIds))) {
                     throw new \Exception('Invalid subject selected for student.');
                 }
-    
+
                 /*
                 |--------------------------------------------------------------------------
                 | EXISTING SUBJECTS
                 |--------------------------------------------------------------------------
                 */
-    
+
                 $existingQuery = StudentSubject::where([
                     'student_id' => $student->id,
                     'course_type' => $request->course_type,
@@ -337,73 +337,73 @@ class StudentSubjectController extends Controller
                 ->when($request->scheme_id, function ($q) use ($request) {
                     $q->where('scheme_id', $request->scheme_id);
                 });
-    
+
                 if ($request->course_type === 'Semester Based') {
-    
+
                     $existingQuery->where('semester_id', $request->semester_id)
                         ->whereNull('annual_semester_id');
-    
+
                 } else {
-    
+
                     $existingQuery->where('annual_semester_id', $request->annual_semester_id)
                         ->whereNull('semester_id');
                 }
-    
+
                 $existingSubjects = $existingQuery->pluck('subject_id')
                     ->map(fn($id) => (string) $id)
                     ->toArray();
-    
+
                 /*
                 |--------------------------------------------------------------------------
                 | INSERT NEW SUBJECTS
                 |--------------------------------------------------------------------------
                 */
-    
+
                 $toInsert = array_diff(
                     $selectedSubjects,
                     $existingSubjects
                 );
-    
+
                 foreach ($toInsert as $subjectId) {
-    
+
                     StudentSubject::create([
-    
+
                         'student_id' => $student->id,
-    
+
                         'subject_id' => $subjectId,
-    
+
                         'course_type' => $request->course_type,
-    
+
                         'course_id' => $request->course_id,
-    
+
                         'branch_id' => $request->branch_id,
-    
+
                         'scheme_id' => $request->scheme_id,
-    
+
                         'semester_id' => $request->course_type === 'Semester Based'
                             ? $request->semester_id
                             : null,
-    
+
                         'annual_semester_id' => $request->course_type === 'Annual Based'
                             ? $request->annual_semester_id
                             : null,
-    
+
                     ]);
                 }
-    
+
                 /*
                 |--------------------------------------------------------------------------
                 | DELETE UNSELECTED SUBJECTS
                 |--------------------------------------------------------------------------
                 */
-    
+
                 $toDelete = array_diff(
                     $existingSubjects,
                     $selectedSubjects
                 );
-    
+
                 if (!empty($toDelete)) {
-    
+
                     $deleteQuery = StudentSubject::where([
                         'student_id' => $student->id,
                         'course_type' => $request->course_type,
@@ -414,33 +414,33 @@ class StudentSubjectController extends Controller
                     ->when($request->scheme_id, function ($q) use ($request) {
                         $q->where('scheme_id', $request->scheme_id);
                     });
-    
+
                     if ($request->course_type === 'Semester Based') {
-    
+
                         $deleteQuery->where('semester_id', $request->semester_id)
                             ->whereNull('annual_semester_id');
-    
+
                     } else {
-    
+
                         $deleteQuery->where('annual_semester_id', $request->annual_semester_id)
                             ->whereNull('semester_id');
                     }
-    
+
                     $deleteQuery->delete();
                 }
             }
-    
+
             DB::commit();
-    
+
             return response()->json([
                 'status' => true,
                 'message' => 'All students subjects updated successfully.'
             ]);
-    
+
         } catch (\Throwable $e) {
-    
+
             DB::rollBack();
-    
+
             return response()->json([
                 'status' => false,
                 'message' => $e->getMessage()
@@ -860,8 +860,8 @@ class StudentSubjectController extends Controller
             return back()->with('error', $e->getMessage());
         }
     }
-    
-    
+
+
     public function exportSample(Request $request)
     {
         // dd($request->all());
@@ -872,38 +872,38 @@ class StudentSubjectController extends Controller
             'scheme_id' => 'nullable|exists:schemes,id',
             'branch_id' => 'required|exists:branches,id',
             'batch_id' => 'required|exists:batches,id',
-    
+
             'semester_id' => 'nullable|required_if:course_type,Semester Based|exists:semesters,id',
-    
+
             'annual_semester_id' => 'nullable|required_if:course_type,Annual Based|exists:annual_semesters,id',
         ]);
-    
+
         /*
         |--------------------------------------------------------------------------
         | Institute ID
         |--------------------------------------------------------------------------
         */
-    
+
         $user = Auth::guard('institute')->user();
-    
+
         $instituteId = $user->account_type === 'institute'
             ? $user->id
             : $user->institute_id;
-    
-    
+
+
         /*
         |--------------------------------------------------------------------------
         | Fetch Students
         |--------------------------------------------------------------------------
         */
-    
+
         $studentsQuery = Student::query()
             ->where('institute_id', $instituteId)
             ->where('course_type', $request->course_type)
             ->where('course_id', $request->course_id)
             ->where('branch_id', $request->branch_id)
             ->where('batch_id', $request->batch_id);
-    
+
         /*
         |--------------------------------------------------------------------------
         | Optional Roll Number Filter
@@ -915,37 +915,37 @@ class StudentSubjectController extends Controller
         | If roll_no is empty:
         | Export all matching students.
         */
-    
+
         if ($request->filled('roll_no')) {
-    
+
             $studentId = Student::where('university_roll_no', trim($request->roll_no))
                 ->where('institute_id', $instituteId)
                 ->value('id');
-    
+
             if (!$studentId) {
                 $studentsQuery->whereRaw('1 = 0');
             } else {
                 $studentsQuery->where('id', $studentId);
             }
         }
-    
+
         if ($request->filled('scheme_id')) {
             $studentsQuery->where('scheme_id', $request->scheme_id);
         }
-    
+
         if ($request->course_type === 'Semester Based') {
-    
+
             $studentsQuery
                 ->where('semester_id', $request->semester_id)
                 ->whereNull('annual_semester_id');
-    
+
         } else {
-    
+
             $studentsQuery
                 ->where('annual_semester_id', $request->annual_semester_id)
                 ->whereNull('semester_id');
         }
-    
+
         $students = $studentsQuery
             ->with([
                 'course',
@@ -956,8 +956,8 @@ class StudentSubjectController extends Controller
             ])
             ->orderBy('university_roll_no', 'asc')
             ->get();
-    
-    
+
+
         /*
         |--------------------------------------------------------------------------
         | Fetch All Subjects
@@ -965,56 +965,56 @@ class StudentSubjectController extends Controller
         | Only subjects table is used.
         | No StudentSubject table.
         */
-    
+
         $subjectsQuery = Subject::query()
             ->where('course_type', $request->course_type)
             ->where('course_id', $request->course_id)
             ->where('branch_id', $request->branch_id);
-    
+
         if ($request->filled('scheme_id')) {
             $subjectsQuery->where('scheme_id', $request->scheme_id);
         }
-    
+
         if ($request->course_type === 'Semester Based') {
-    
+
             $subjectsQuery
                 ->where('semester_id', $request->semester_id)
                 ->whereNull('annual_semester_id');
-    
+
         } else {
-    
+
             $subjectsQuery
                 ->where('annual_semester_id', $request->annual_semester_id)
                 ->whereNull('semester_id');
         }
-    
+
         $subjects = $subjectsQuery
             ->orderBy('orders', 'asc')
             ->orderBy('id', 'asc')
             ->get();
-    
-    
+
+
         /*
         |--------------------------------------------------------------------------
         | CSV Download
         |--------------------------------------------------------------------------
         */
-    
+
         $filename = 'student_assign_subjects_' . date('Ymd_His') . '.csv';
-    
+
         $headers = [
             'Content-Type' => 'text/csv; charset=UTF-8',
             'Content-Disposition' => 'attachment; filename="' . $filename . '"',
             'Cache-Control' => 'no-store, no-cache',
         ];
-    
+
         return response()->streamDownload(function () use ($students, $subjects, $request) {
-    
+
             $file = fopen('php://output', 'w');
-    
+
             // UTF-8 BOM for Excel
             fprintf($file, chr(0xEF) . chr(0xBB) . chr(0xBF));
-    
+
             // Exact column headings
             fputcsv($file, [
                 'id',
@@ -1028,55 +1028,55 @@ class StudentSubjectController extends Controller
                 'semester_name',
                 'annual_year',
             ]);
-    
+
             $srNo = 1;
-    
+
             /*
             |--------------------------------------------------------------------------
             | Every Student × Every Subject
             |--------------------------------------------------------------------------
             */
-    
+
             foreach ($students as $student) {
-    
+
                 foreach ($subjects as $subject) {
-    
+
                     fputcsv($file, [
-    
+
                         // Sequential Sr. No.
                         $srNo++,
-    
+
                         // Student details
                         $student->university_roll_no,
-    
+
                         // Subject details
                         $subject->name,
                         $subject->subject_code,
-    
+
                         // Course details
                         $student->course_type,
                         optional($student->course)->name,
-    
+
                         // Scheme and branch
                         optional($student->scheme)->name,
                         optional($student->branch)->name,
-    
+
                         // Semester Based / Annual Based
                         $request->course_type === 'Semester Based'
                             ? optional($student->semester)->name
                             : '',
-    
+
                         $request->course_type === 'Annual Based'
                             ? optional($student->annual_semester)->name
                             : '',
                     ]);
                 }
             }
-    
+
             fclose($file);
-    
+
         }, $filename, $headers);
     }
-    
+
 
 }
