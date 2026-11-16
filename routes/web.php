@@ -10,6 +10,7 @@ use App\Http\Controllers\CpSheetController;
 use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\DmcSheetController;
 use App\Http\Controllers\EmployeeController;
+use App\Http\Controllers\ExamCenterController;
 use App\Http\Controllers\ExamController;
 use App\Http\Controllers\ExamFeeController;
 use App\Http\Controllers\FrontsheetController;
@@ -154,6 +155,7 @@ Route::middleware(['backend.auth'])->prefix('backend')->group(function () {
     Route::resource('subjects',SubjectController::class);
     Route::resource('exams', ExamController::class);
     Route::resource('exam-fees', ExamFeeController::class) ->names('exam-fees');
+    Route::resource('exam-centers', ExamCenterController::class) ->names('exam-centers');
     Route::resource('mid-sem-exams', MidSemExamController::class);
     Route::resource('pass-percentages', PassPercentageController::class)->except(['create', 'show']);
     Route::resource('marks-grades', MarksGradeController::class)->except(['create', 'show']);
