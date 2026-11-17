@@ -18,7 +18,7 @@
                                 <th>#</th>
                                 <th>Name</th>
                                 <th>Short</th>
-                                <th>Academic Year</th>
+                                <th>Exam Month</th>
                                 <th>Active</th>
                                 <th>Show Admit</th>
                                 <th>Action</th>
@@ -43,8 +43,8 @@
                                     </td>
                                     <td>
                                         <div class="dropdown">
-                                            <button class="btn btn-sm btn-transparent dropdown-toggle" type="button" 
-                                                    id="actionDropdown{{ $exam->id }}" data-bs-toggle="dropdown" 
+                                            <button class="btn btn-sm btn-transparent dropdown-toggle" type="button"
+                                                    id="actionDropdown{{ $exam->id }}" data-bs-toggle="dropdown"
                                                     aria-expanded="false">
                                                 <i class="mdi mdi-dots-vertical fs-16"></i>
                                             </button>

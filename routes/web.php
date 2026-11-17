@@ -4,6 +4,7 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AnnualSemesterController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BatchController;
+use App\Http\Controllers\BlockStudentController;
 use App\Http\Controllers\BranchController;
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\CpSheetController;
@@ -127,6 +128,7 @@ Route::get('/subjects/filter', [SubjectController::class, 'getSubjects']);
 Route::get('/institute/subjects/filter', [SubjectController::class, 'getSubjectsByInstitute'])->name('institute.subjects.filter');
 Route::get('/result/subjects/filter', [SubjectController::class, 'getFilterSubjects'])->name('result.subjects.filter');
 Route::get('/result/subjects/theory-paper/filter', [SubjectController::class, 'getFilterTheoryPaperSubjects'])->name('result.subjects.theory-paper.filter');
+Route::get('/student/examination-form/verified-subjects', [SubjectController::class, 'getStudentExamFormVerifiedSubjects'])->name('student.examination-form.verified-subjects');
 Route::get('/result/subjects/ncCourse/filter', [SubjectController::class, 'getFilterNcSubjects'])->name('result.subjects.ncCourse.filter');
 Route::get('/get-midsem-exams/{exam_id}', [ExamController::class, 'getMidSemExams']);
 
@@ -157,6 +159,23 @@ Route::middleware(['backend.auth'])->prefix('backend')->group(function () {
     Route::resource('exam-fees', ExamFeeController::class) ->names('exam-fees');
     Route::resource('exam-centers', ExamCenterController::class) ->names('exam-centers');
     Route::resource('mid-sem-exams', MidSemExamController::class);
+    Route::get('/block-students', [BlockStudentController::class, 'index'])
+        ->name('block-students.index');
+
+    Route::post('/block-students/store', [BlockStudentController::class, 'store'])
+        ->name('block-students.store');
+
+    Route::get('/block-students/data', [BlockStudentController::class, 'getData'])
+        ->name('block-students.data');
+
+    Route::get('/block-students/{id}/edit', [BlockStudentController::class, 'edit'])
+        ->name('block-students.edit');
+
+    Route::put('/block-students/{id}', [BlockStudentController::class, 'update'])
+        ->name('block-students.update');
+
+    Route::delete('/block-students/{id}', [BlockStudentController::class, 'destroy'])
+        ->name('block-students.destroy');
     Route::resource('pass-percentages', PassPercentageController::class)->except(['create', 'show']);
     Route::resource('marks-grades', MarksGradeController::class)->except(['create', 'show']);
     Route::resource('grace-marks', GraceMarksController::class);

@@ -23,7 +23,7 @@
         <input type="text" name="exam_resultsheet_name" class="form-control"
             value="{{ old('exam_resultsheet_name', $exam->exam_resultsheet_name ?? '') }}">
     </div>
-    
+
     <div class="col-md-6 mb-3">
         <label>Supplementary Result Sheet Name</label>
         <input type="text" name="supple_result_sheet" class="form-control"
@@ -41,7 +41,7 @@
         <input type="text" name="dmc_name" class="form-control"
             value="{{ old('dmc_name', $exam->dmc_name ?? '') }}">
     </div>
-    
+
     <div class="col-md-2 mb-3">
         <label>Examination year</label>
         <input type="text" name="exam_year" class="form-control"
@@ -49,9 +49,9 @@
     </div>
 
     <div class="col-md-2 mb-3">
-        <label>Academic year</label>
+        <label>Exam Month</label>
         <input type="text" name="exam_month" class="form-control"
-            value="{{ old('exam_month', $exam->exam_month ?? '') }}" placeholder="eg : 2025-26">
+            value="{{ old('exam_month', $exam->exam_month ?? '') }}" placeholder="eg : JAN,FEB,APR,MAY,JUN,JUL,AUG,SEP,OCT,NOV,DEC">
     </div>
 
     <div class="col-md-2 mb-3">

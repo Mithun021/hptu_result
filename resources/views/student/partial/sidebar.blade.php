@@ -45,7 +45,7 @@
                                 <div class="collapse" id="examination">
                                     <ul class="nav-second-level">
                                         <li><a href="{{ route('student.examination-form.index') }}" class="tp-link">Fill Examination Form</a></li>
-                                        <li><a href="{{ route('pass-percentages.index') }}" class="tp-link">Form Records</a></li>
+                                        <li><a href="{{ route('student.filled-examination-forms.index') }}" class="tp-link">Form Records</a></li>
                                     </ul>
                                 </div>
                             </li>

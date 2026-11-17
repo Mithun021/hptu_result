@@ -8,6 +8,7 @@ use Illuminate\Database\QueryException;
 use App\Models\Course;
 use App\Models\Scheme;
 use App\Models\Semester;
+use App\Models\StudentSubject;
 use App\Models\Subject;
 use App\Models\TeacherSubject;
 use Illuminate\Http\Request;
@@ -164,7 +165,11 @@ class SubjectController extends Controller
             $query->where('annual_semester_id', $request->annual_semester_id);
         }
 
-        $subjects = $query->select('id', 'name', 'subject_code')->get();
+        // $subjects = $query->select('id', 'name', 'subject_code','type')->get();
+        $subjects = $query
+            ->select('id', 'name', 'subject_code', 'type')
+            ->orderBy('subject_code', 'asc')
+            ->get();
 
         return response()->json($subjects);
     }
@@ -842,5 +847,70 @@ class SubjectController extends Controller
 
         return response()->json($subjects);
     }
+
+
+
+    public function getStudentExamFormVerifiedSubjects(Request $request)
+    {
+        $student = auth('student')->user();
+
+        if (!$student) {
+            abort(403);
+        }
+
+        $query = StudentSubject::with([
+            'subject:id,name,subject_code,type'
+        ])
+        ->where('student_id', $student->id)
+        ->where('course_type', $student->course_type)
+        ->where('course_id', $student->course_id)
+        ->where('branch_id', $student->branch_id)
+        ->where('scheme_id', $student->scheme_id);
+
+        // Semester Based
+        if ($student->course_type == 'Semester Based') {
+
+            $request->validate([
+                'semester_id' => 'required|exists:semesters,id',
+            ]);
+
+            $query->where('semester_id', $request->semester_id);
+        }
+
+        // Annual Based
+        if ($student->course_type == 'Annual Based') {
+
+            $request->validate([
+                'annual_semester_id' => 'required|exists:annual_semesters,id',
+            ]);
+
+            $query->where('annual_semester_id', $request->annual_semester_id);
+        }
+
+        $subjects = $query
+            ->get()
+            ->pluck('subject')
+            ->filter()
+            ->sort(function ($a, $b) {
+
+                $typeOrder = [
+                    'Theory' => 1,
+                    'Practical' => 2,
+                ];
+
+                $typeComparison = ($typeOrder[$a->type] ?? 3)
+                    <=> ($typeOrder[$b->type] ?? 3);
+
+                if ($typeComparison !== 0) {
+                    return $typeComparison;
+                }
+
+                return strcmp($a->subject_code, $b->subject_code);
+            })
+            ->values();
+
+        return response()->json($subjects);
+    }
+
 
 }

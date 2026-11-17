@@ -44,6 +44,7 @@ class Student extends Authenticatable
         'scheme_id',
         'batch_id',
         'pursuing_status',
+        'kyc_status',
     ];
 
     public function getAuthIdentifierName()
