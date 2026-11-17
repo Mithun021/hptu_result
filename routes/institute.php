@@ -38,14 +38,20 @@ Route::middleware(['institute.auth'])->prefix('institute')->group(function () {
     Route::post('teacher/save-assign-subject', [AssignSubjectController::class, 'save_assign_subject'])
         ->name('save.assign.subject');
 
-    Route::get('teacher/edit-assign-subject/{teacher}', [AssignSubjectController::class, 'edit_assign_subject'])
-            ->name('edit.assign.subject');
+    Route::get('teacher/edit-assign-subject/{id}', [
+        AssignSubjectController::class,
+        'edit_assign_subject'
+    ])->name('edit.assign.subject');
 
-    Route::put('teacher/update-assign-subject/{teacher}', [AssignSubjectController::class, 'update_assign_subject'])
-        ->name('update.assign.subject');
+    Route::put('teacher/update-assign-subject/{id}', [
+        AssignSubjectController::class,
+        'update_assign_subject'
+    ])->name('update.assign.subject');
 
-    Route::delete('teacher/delete-assign-subject/{teacher}', [AssignSubjectController::class, 'delete_assign_subject'])
-        ->name('delete.assign.subject');
+    Route::delete('teacher/delete-assign-subject/{id}', [
+        AssignSubjectController::class,
+        'delete_assign_subject'
+    ])->name('delete.assign.subject');
 
 
     // Student Management ---------------------------------------
