@@ -1,3 +1,4 @@
+
 @extends('backend.partial.master')
 @section('title', 'Exam')
 @section('sub_title', 'Exam List')
@@ -14,7 +15,26 @@
                 @method('PUT')
 
                 <div class="row">
-                    <div class="col-md-4">
+
+                    <div class="col-md-3 d-none">
+                        <label>Course Type</label>
+                        <select name="course_type" class="form-control">
+                            <option value="">Select Course Type</option>
+                            <option value="Semester Based"
+                                {{ old('course_type', $midSemExam->course_type) == 'Semester Based' ? 'selected' : '' }}>
+                                Semester Based
+                            </option>
+                            {{-- <option value="Annual Based"
+                                {{ old('course_type', $midSemExam->course_type) == 'Annual Based' ? 'selected' : '' }}>
+                                Annual Based
+                            </option> --}}
+                        </select>
+                        @error('course_type')
+                            <small class="text-danger">{{ $message }}</small>
+                        @enderror
+                    </div>
+
+                    <div class="col-md-3">
                         <label>Exam</label>
                         <select name="exam_id" class="form-control">
                             @foreach($exams as $exam)
@@ -29,7 +49,7 @@
                         @enderror
                     </div>
 
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label>Mid-Sem Exam Name</label>
                         <input type="text"
                             name="mid_sem_exam_name"
@@ -57,11 +77,11 @@
                         @enderror
                     </div>
 
-                    <div class="col-md-2 mt-2">
+                    <div class="col-md-1 mt-2">
                         <button class="btn btn-success mt-2">Update</button>
                     </div>
-                </div>
 
+                </div>
             </form>
         </div>
     </div>

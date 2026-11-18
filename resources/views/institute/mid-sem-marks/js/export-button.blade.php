@@ -215,7 +215,7 @@ $("#dmc-print-btn").click(function () {
 
                 /* SIGNATURE SPACE */
                 table.dmc-table tfoot tr.bottom-signature td{
-                    padding-top: 120px !important; 
+                    padding-top: 120px !important;
                 }
 
                 table.dmc-table tfoot tr.bottom-signature td.text-right{
@@ -238,6 +238,12 @@ $("#dmc-print-btn").click(function () {
 
                 .no-export{
                     display:none !important;
+                }
+
+                #display-flex-between{
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
                 }
 
             </style>
@@ -381,6 +387,12 @@ $("#print-btn-a4").click(function () {
                     margin : 4px;
                 }
 
+                #display-flex-between{
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                }
+
             </style>
 
         </head>
@@ -478,7 +490,7 @@ document.getElementById("transcript-print-btn").addEventListener("click", functi
 
                 .result-transcript{
                     width: 100%;
-                    display: flex;  
+                    display: flex;
                     gap: 2px;
                 }
                 .result-transcript .half{

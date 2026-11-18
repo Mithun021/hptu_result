@@ -11,23 +11,23 @@
     <div class="offcanvas-body card">
         <form action="{{ route('mid-sem-marks.export') }}" method="POST"> @csrf
         <div class="row">
-            <div class="col-md-2 form-group mb-2">
+            <div class="col-md-2 form-group mb-2 d-none">
                 <label for="course_type">Course Type<span class="text-danger">*</span></label>
                 <select name="course_type" id="export_course_type" class="form-control">
                     <option value="">--Select--</option>
-                    <option value="Annual Based">Annual Based</option>
-                    <option value="Semester Based">Semester Based</option>
+                    {{-- <option value="Annual Based">Annual Based</option> --}}
+                    <option value="Semester Based" selected>Semester Based</option>
                 </select>
                 @error('course_type') <small class="text-danger">{{ $message }}</small> @enderror
             </div>
-            
+
             <div class="col-md-4 form-group mb-2">
                 <label for="mid_sem_exam_id">Mid-Sem/Internal Exam Name<span class="text-danger">*</span></label>
                 <select name="mid_sem_exam_id" id="export_mid_sem_exam_id" class="form-control">
                     <option value="">--Select--</option>
                 </select>
             </div>
-            
+
             <div class="col-md-2 form-group mb-2">
                 <label for="course_id">Select Course<span class="text-danger">*</span></label>
                 <select name="course_id" id="export_course_id" class="form-control">

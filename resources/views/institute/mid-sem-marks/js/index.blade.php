@@ -2,19 +2,13 @@
 <script src="https://cdn.jsdelivr.net/jquery.validation/1.19.5/jquery.validate.min.js"></script>
 
 <script>
-
     $(document).ready(function () {
 
-        $('#course_type, #export_course_type').on('change', function () {
+        // =========================
+        // LOAD MID SEM EXAMS
+        // =========================
+        function loadMidSemExams(courseType, examDropdown) {
 
-            let courseType = $(this).val();
-
-            // Identify corresponding dropdown
-            let examDropdown = $(this).attr('id') == 'course_type'
-                ? $('#mid_sem_exam_id')
-                : $('#export_mid_sem_exam_id');
-
-            // Reset dropdown
             examDropdown.html('<option value="">--Select--</option>');
 
             if (courseType == '') {
@@ -82,74 +76,145 @@
 
             });
 
+        }
+
+
+        // =========================
+        // COURSE TYPE CHANGE
+        // =========================
+        $('#course_type, #export_course_type').on('change', function () {
+
+            let courseType = $(this).val();
+
+            let examDropdown = $(this).attr('id') == 'course_type'
+                ? $('#mid_sem_exam_id')
+                : $('#export_mid_sem_exam_id');
+
+            loadMidSemExams(courseType, examDropdown);
+
         });
 
+
+        // =========================
+        // INITIAL LOAD - MID SEM EXAMS
+        // =========================
+        if ($('#course_type').length) {
+
+            loadMidSemExams(
+                $('#course_type').val(),
+                $('#mid_sem_exam_id')
+            );
+
+        }
+
+        if ($('#export_course_type').length) {
+
+            loadMidSemExams(
+                $('#export_course_type').val(),
+                $('#export_mid_sem_exam_id')
+            );
+
+        }
+
+
+        // =========================
+        // PREVENT ARROW UP/DOWN
+        // =========================
+        $(document).on('keydown', '.obtained-marks', function (e) {
+
+            if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                e.preventDefault();
+            }
+
+        });
+
+
+        // =========================
+        // MARKS TYPE CHANGE
+        // =========================
+        function updateMarksType() {
+
+            let courseType = $('#course_type').val();
+
+            let courseSelect = document.getElementById('course_id');
+
+            if (!courseSelect || courseSelect.selectedIndex < 0) {
+                return;
+            }
+
+            let selectedOption = courseSelect.options[courseSelect.selectedIndex];
+
+            let courseCategory = selectedOption.getAttribute('data-course');
+
+            let marksType = $('#marks_type');
+
+            marksType.html('<option value="">--Select--</option>');
+
+            if (!courseType || !courseCategory) {
+                return;
+            }
+
+
+            // =========================
+            // SEMESTER BASED
+            // =========================
+            if (courseType === 'Semester Based') {
+
+                if (courseCategory === 'UG') {
+
+                    marksType.append(`
+                        <option value="Internal">Internal</option>
+                    `);
+
+                }
+
+                if (courseCategory === 'Diploma') {
+
+                    marksType.append(`
+                        <option value="Internal">Internal</option>
+                    `);
+
+                }
+
+            }
+
+
+            // =========================
+            // ANNUAL BASED
+            // =========================
+            if (courseType === 'Annual Based') {
+
+                if (courseCategory === 'UG' || courseCategory === 'Diploma') {
+
+                    marksType.append(`
+                        <option value="Internal 1">Internal 1</option>
+                        <option value="Internal 2">Internal 2</option>
+                        <option value="Internal 3">Internal 3</option>
+                    `);
+
+                }
+
+            }
+
+        }
+
+
+        // =========================
+        // MARKS TYPE EVENTS
+        // =========================
+        $('#course_type, #course_id').on('change', function () {
+
+            updateMarksType();
+
+        });
+
+
+        // =========================
+        // INITIAL LOAD - MARKS TYPE
+        // =========================
+        updateMarksType();
+
     });
-
-    $(document).on('keydown', '.obtained-marks', function(e) {
-        if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-            e.preventDefault();
-        }
-    });
-
-    // =========================
-    // MARKS TYPE CHANGE
-    // =========================
-    document.getElementById('course_type').addEventListener('change', updateMarksType);
-    document.getElementById('course_id').addEventListener('change', updateMarksType);
-
-    function updateMarksType() {
-
-        let courseType = document.getElementById('course_type').value;
-        let courseSelect = document.getElementById('course_id');
-        let selectedOption = courseSelect.options[courseSelect.selectedIndex];
-        let courseCategory = selectedOption.getAttribute('data-course');
-
-        let marksType = document.getElementById('marks_type');
-
-        marksType.innerHTML = '<option value="">--Select--</option>';
-
-        if (!courseType || !courseCategory) return;
-
-        // Semester Based
-        if (courseType === 'Semester Based') {
-
-            if (courseCategory === 'UG') {
-                marksType.innerHTML += `
-                    <option value="Mid-Sem">Mid-Sem</option>
-                    <option value="Quiz">Quiz</option>
-                    <option value="Practical">Practical</option>
-                `;
-            }
-
-            if (courseCategory === 'Diploma') {
-                marksType.innerHTML += `
-                    <option value="Mid-Sem">Mid-Sem</option>
-                `;
-            }
-        }
-
-        // Annual Based
-        if (courseType === 'Annual Based') {
-
-            if (courseCategory === 'UG') {
-                marksType.innerHTML += `
-                    <option value="Internal 1">Internal 1</option>
-                    <option value="Internal 2">Internal 2</option>
-                    <option value="Internal 3">Internal 3</option>
-                    
-                `;
-            }
-
-            if (courseCategory === 'Diploma') {
-                marksType.innerHTML += `
-                    <option value="Internal 1">Internal 1</option>
-                    <option value="Internal 2">Internal 2</option>
-                    <option value="Internal 3">Internal 3</option>
-                `;
-            }
-        }
-    }
 </script>
 
 <script>
@@ -174,46 +239,102 @@ $(document).ready(function () {
         let courseId = $('#course_id').val();
         let schemeId = $('#scheme_id').val();
         let branchId = $('#branch_id').val();
+        let batchId = $('#batch_id').val();
         let semesterId = $('#semester_id').val();
         let annualSemesterId = $('#annual_semester_id').val();
 
-        if (!courseId || !branchId) {
+        if (!courseId || !branchId || !batchId) {
+            $('#subject_id').html(
+                '<option value="">--Select Subject--</option>'
+            );
             return;
         }
- 
-        $('#subject_id').html('<option>Please wait...</option>');
+
+        if (courseType === 'Semester Based' && !semesterId) {
+            $('#subject_id').html(
+                '<option value="">--Select Subject--</option>'
+            );
+            return;
+        }
+
+        if (courseType === 'Annual Based' && !annualSemesterId) {
+            $('#subject_id').html(
+                '<option value="">--Select Subject--</option>'
+            );
+            return;
+        }
+
+        $('#subject_id').html(
+            '<option value="">Please wait...</option>'
+        );
 
         $.ajax({
+
             url: "{{ url('institute/subjects/filter') }}",
+
             type: "GET",
+
             data: {
                 course_type: courseType,
                 course_id: courseId,
                 scheme_id: schemeId,
                 branch_id: branchId,
+                batch_id: batchId,
                 semester_id: semesterId,
                 annual_semester_id: annualSemesterId
             },
+
             success: function (subjects) {
 
-                $('#subject_id').html('<option value="">--Select Subject--</option>');
+                $('#subject_id').html(
+                    '<option value="">--Select Subject--</option>'
+                );
 
                 if (subjects.length > 0) {
+
                     $.each(subjects, function (_, subject) {
+
                         $('#subject_id').append(
-                            `<option value="${subject.id}">${subject.name}</option>`
+                            $('<option>', {
+                                value: subject.id,
+                                text: subject.name
+                            })
                         );
+
                     });
+
                 } else {
-                    $('#subject_id').append('<option value="">No Subject Found</option>');
+
+                    $('#subject_id').html(
+                        '<option value="">No Subject Found</option>'
+                    );
+
                 }
+
+            },
+
+            error: function (xhr) {
+
+                console.log(xhr.responseText);
+
+                $('#subject_id').html(
+                    '<option value="">Failed to load subjects</option>'
+                );
+
             }
+
         });
+
     }
 
-    $('#branch_id, #scheme_id, #semester_id, #annual_semester_id').on('change', function () {
-        loadSubjects();
-    });
+
+    // =========================
+    // SUBJECT FILTER CHANGE
+    // =========================
+    $('#branch_id, #scheme_id, #batch_id, #semester_id, #annual_semester_id')
+        .on('change', function () {
+            loadSubjects();
+        });
 
     // =========================
     // LOAD COURSE DATA
@@ -317,6 +438,7 @@ $(document).ready(function () {
         if (!$('#mid_sem_exam_id').val()) return alert('Mid-Sem Exam Name Required');
         if (!$('#course_type').val()) return alert('Course Type Required');
         if (!$('#course_id').val()) return alert('Course Required');
+        if (!$('#scheme_id').val()) return alert('Scheme Required');
         if (!$('#branch_id').val()) return alert('Branch Required');
         if (!$('#batch_id').val()) return alert('Batch Required');
         if (!$('#marks_type').val()) return alert('Marks Type Required');
@@ -494,20 +616,20 @@ $(document).ready(function () {
             //     }).showToast();
             // },
             success: function (response) {
-            
+
                 if (inputEl) {
                     inputEl.addClass('border border-success');
-            
+
                     setTimeout(() => {
                         inputEl.removeClass('border border-success');
                     }, 800);
                 }
-            
+
                 // SHOW CHECKBOX AFTER SAVE
                 if (response.id) {
-            
+
                     let checkbox = $('input.student-checkbox[data-id="' + response.id + '"]');
-            
+
                     if (checkbox.length) {
                         checkbox
                             .attr('data-id', response.id)
@@ -515,7 +637,7 @@ $(document).ready(function () {
                             .show();
                     } else {
                         let row = $('.obtained-marks[data-student="' + studentId + '"]').closest('tr');
-            
+
                         row.find('td:first').html(`
                             <input type="checkbox"
                                 class="student-checkbox"
@@ -523,7 +645,7 @@ $(document).ready(function () {
                         `);
                     }
                 }
-            
+
                 Toastify({
                     text: "Marks saved successfully",
                     duration: 1500,

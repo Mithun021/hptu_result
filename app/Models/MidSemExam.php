@@ -12,6 +12,7 @@ class MidSemExam extends Model
     protected $fillable = [
         'exam_id',
         'mid_sem_exam_name',
+        'course_type',
         'status'
     ];
 

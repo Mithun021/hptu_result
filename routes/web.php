@@ -130,7 +130,7 @@ Route::get('/result/subjects/filter', [SubjectController::class, 'getFilterSubje
 Route::get('/result/subjects/theory-paper/filter', [SubjectController::class, 'getFilterTheoryPaperSubjects'])->name('result.subjects.theory-paper.filter');
 Route::get('/student/examination-form/verified-subjects', [SubjectController::class, 'getStudentExamFormVerifiedSubjects'])->name('student.examination-form.verified-subjects');
 Route::get('/result/subjects/ncCourse/filter', [SubjectController::class, 'getFilterNcSubjects'])->name('result.subjects.ncCourse.filter');
-Route::get('/get-midsem-exams/{exam_id}', [ExamController::class, 'getMidSemExams']);
+Route::get('/get-mid-sem-exams', [MidSemExamController::class, 'getMidSemExamsCourseBased'])->name('coursebased.get.mid.sem.exams');
 
 Route::middleware(['backend.auth'])->prefix('backend')->group(function () {
 

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AnnualSemester;
+use App\Models\AssignTeachSubjectList;
 use App\Models\Branch;
 use Illuminate\Database\QueryException;
 use App\Models\Course;
@@ -181,7 +182,12 @@ class SubjectController extends Controller
         $institute_id = $user->account_type === 'institute'
             ? $user->id
             : $user->institute_id;
+
+        // =========================
+        // BASIC SUBJECT QUERY
+        // =========================
         $query = Subject::query();
+
         $query->where('course_id', $request->course_id)
             ->where('branch_id', $request->branch_id)
             ->where(function ($q) {
@@ -193,24 +199,77 @@ class SubjectController extends Controller
             $query->where('scheme_id', $request->scheme_id);
         }
 
+        // =========================
+        // SEMESTER BASED
+        // =========================
         if ($request->course_type == 'Semester Based') {
+
             $query->where('semester_id', $request->semester_id)
                 ->whereNull('annual_semester_id');
+
         }
 
+        // =========================
+        // ANNUAL BASED
+        // =========================
         if ($request->course_type == 'Annual Based') {
+
             $query->where('annual_semester_id', $request->annual_semester_id)
                 ->whereNull('semester_id');
+
         }
 
+        // =========================
+        // TEACHER LOGIN
+        // =========================
         if ($user->account_type === 'teacher') {
-            $assignedSubjects = TeacherSubject::where('teacher_id', $user->id)
-                ->where('institute_id', $institute_id)
-                ->pluck('subject_id')
-                ->toArray();
-            $query->whereIn('id', $assignedSubjects);
+
+            $assignedSubjectIds = AssignTeachSubjectList::whereHas(
+                'assignTeacherSubject',
+                function ($q) use ($request, $user, $institute_id) {
+
+                    $q->where('teacher_id', $user->id)
+                        ->where('institute_id', $institute_id)
+                        ->where('course_id', $request->course_id)
+                        ->where('branch_id', $request->branch_id)
+                        ->where('batch_id', $request->batch_id);
+
+                    // Scheme filter
+                    if (!empty($request->scheme_id)) {
+                        $q->where('scheme_id', $request->scheme_id);
+                    } else {
+                        $q->whereNull('scheme_id');
+                    }
+
+                    // Semester Based filter
+                    if ($request->course_type == 'Semester Based') {
+
+                        $q->where('semester_id', $request->semester_id)
+                            ->whereNull('annual_semester_id');
+
+                    }
+
+                    // Annual Based filter
+                    if ($request->course_type == 'Annual Based') {
+
+                        $q->where('annual_semester_id', $request->annual_semester_id)
+                            ->whereNull('semester_id');
+
+                    }
+
+                }
+            )->pluck('subject_id');
+
+            $query->whereIn('id', $assignedSubjectIds);
         }
-        $subjects = $query->select('id', 'name', 'subject_code')->get();
+
+        // =========================
+        // FINAL SUBJECTS
+        // =========================
+        $subjects = $query
+            ->select('id', 'name', 'subject_code')
+            ->get();
+
         return response()->json($subjects);
     }
 

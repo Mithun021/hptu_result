@@ -1,3 +1,4 @@
+
 @extends('backend.partial.master')
 @section('title', 'Exam')
 @section('sub_title', 'Exam List')
@@ -16,6 +17,19 @@
                 @csrf
 
                 <div class="row">
+
+                    <div class="col-md-4 d-none">
+                        <label>Course Type</label>
+                        <select name="course_type" class="form-control">
+                            <option value="">Select Course Type</option>
+                            <option value="Semester Based" {{ old('course_type') == 'Semester Based' ? 'selected' : '' }} default selected>Semester Based</option>
+                            {{-- <option value="Annual Based" {{ old('course_type') == 'Annual Based' ? 'selected' : '' }}>Annual Based</option> --}}
+                        </select>
+                        @error('course_type')
+                            <small class="text-danger">{{ $message }}</small>
+                        @enderror
+                    </div>
+
                     <div class="col-md-4">
                         <label>Exam</label>
                         <select name="exam_id" class="form-control">
@@ -29,7 +43,7 @@
                         @enderror
                     </div>
 
-                    <div class="col-md-4">
+                    <div class="col-md-5">
                         <label>Mid-Sem Exam Name</label>
                         <input type="text" name="mid_sem_exam_name" class="form-control" value="{{ old('mid_sem_exam_name') }}">
                         @error('mid_sem_exam_name')
@@ -49,11 +63,11 @@
                         @enderror
                     </div>
 
-                    <div class="col-md-2 mt-2">
+                    <div class="col-md-1 mt-2">
                         <button class="btn btn-primary mt-2">Save</button>
                     </div>
-                </div>
 
+                </div>
             </form>
         </div>
     </div>
@@ -63,10 +77,11 @@
         <div class="card-header">All Records</div>
         <div class="card-body">
             <div class="table-responsive database-table">
-                <table class="table table-bordered table-bordered"  id="datatable-buttons">
+                <table class="table table-bordered" id="datatable-buttons">
                     <thead class="table-primary">
                         <tr>
                             <th>#</th>
+                            <th>Course Type</th>
                             <th>Exam</th>
                             <th>Mid-Sem Name</th>
                             <th>Status</th>
@@ -77,6 +92,7 @@
                         @foreach($midSemExams as $key => $row)
                             <tr>
                                 <td>{{ $key+1 }}</td>
+                                <td>{{ $row->course_type }}</td>
                                 <td>{{ $row->exam->name ?? '' }}</td>
                                 <td>{{ $row->mid_sem_exam_name }}</td>
                                 <td>
