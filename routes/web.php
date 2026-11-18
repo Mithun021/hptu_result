@@ -2,12 +2,14 @@
 
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AnnualSemesterController;
+use App\Http\Controllers\AttendanceSheetController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BatchController;
 use App\Http\Controllers\BlockStudentController;
 use App\Http\Controllers\BranchController;
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\CpSheetController;
+use App\Http\Controllers\CutlistController;
 use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\DmcSheetController;
 use App\Http\Controllers\EmployeeController;
@@ -23,6 +25,7 @@ use App\Http\Controllers\MidSemExamController;
 use App\Http\Controllers\PassPercentageController;
 use App\Http\Controllers\PermissionCategoryController;
 use App\Http\Controllers\PermissionController;
+use App\Http\Controllers\PortalFeatureController;
 use App\Http\Controllers\ResultController;
 use App\Http\Controllers\RetotallingMappedSubjectController;
 use App\Http\Controllers\RetotallingResultController;
@@ -187,6 +190,13 @@ Route::middleware(['backend.auth'])->prefix('backend')->group(function () {
     Route::resource('students',StudentController::class);
     Route::get('student/data',[StudentController::class,'data'])->name('students.data');
     Route::post('/student/import', [StudentController::class, 'importStudent'])->name('students.import');
+
+    // Portal Feature Settings
+    Route::get('/setting', [PortalFeatureController::class, 'index'])
+        ->name('setting.index');
+
+    Route::post('/setting/update', [PortalFeatureController::class, 'update'])
+        ->name('setting.update');
 
     Route::get('/roles', [PermissionController::class, 'roles'])->name('roles');
     Route::post('/roles/store', [PermissionController::class, 'roles_store'])->name('roles.store');
@@ -360,6 +370,12 @@ Route::middleware(['backend.auth'])->prefix('backend')->group(function () {
 
         });
     });
+
+    // Examination form Data ---------------------------------------------
+
+    Route::get('cutlist', [CutlistController::class, 'index']) ->name('admin.cutlist.index');
+    Route::get('attendance-sheet', [AttendanceSheetController::class, 'index']) ->name('admin.attendance-sheet.index');
+    Route::get('attendance-sheet/detail', [AttendanceSheetController::class, 'show']) ->name('admin.attendance-sheet.detail');
 
 });
 

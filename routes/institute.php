@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\AttendanceSheetController;
+use App\Http\Controllers\CutlistController;
 use App\Http\Controllers\institute\AssignSubjectController;
 use App\Http\Controllers\institute\MidSemMarksController;
 use App\Http\Controllers\institute\StudentController;
@@ -78,5 +80,9 @@ Route::middleware(['institute.auth'])->prefix('institute')->group(function () {
         Route::get('student-subjects/export-sample', [StudentSubjectController::class, 'exportSample'])
         ->name('export-sample');
     });
+
+    Route::get('cutlist', [CutlistController::class, 'index']) ->name('institute.cutlist.index');
+    Route::get('attendance-sheet', [AttendanceSheetController::class, 'index']) ->name('institute.attendance-sheet.index');
+    Route::get('attendance-sheet/detail', [AttendanceSheetController::class, 'show']) ->name('institute.attendance-sheet.detail');
 
 });

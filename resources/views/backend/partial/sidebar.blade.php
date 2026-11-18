@@ -200,6 +200,24 @@
                 </li>
 
                 <li>
+                    <a href="#examination-form-data" data-bs-toggle="collapse">
+                        <i data-feather="users"></i>
+                        <span> Examination Form Data </span>
+                        <span class="menu-arrow"></span>
+                    </a>
+                    <div class="collapse" id="examination-form-data">
+                        <ul class="nav-second-level">
+                            <li>
+                                <a href="{{ route('admin.cutlist.index') }}" class="tp-link">Cutlist List</a>
+                            </li>
+                            <li>
+                                <a href="{{ route('admin.attendance-sheet.index') }}" class="tp-link">Attendance Sheet</a>
+                            </li>
+                        </ul>
+                    </div>
+                </li>
+
+                <li>
                     <a href="#academic" data-bs-toggle="collapse">
                         <i data-feather="book-open"></i>
                         <span> Academic </span>
@@ -279,6 +297,9 @@
                     </a>
                     <div class="collapse" id="sidebarMaps">
                         <ul class="nav-second-level">
+                            <li>
+                                <a href="{{ route('setting.index') }}" class="tp-link">College Panel</a>
+                            </li>
                             <li>
                                 <a href="{{ route('backend.mail-config.index') }}" class="tp-link">Mail Config</a>
                             </li>

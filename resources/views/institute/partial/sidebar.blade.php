@@ -90,6 +90,20 @@
                                 </a>
                             </li>
 
+                            <li>
+                                <a href="{{ route('institute.cutlist.index') }}" class="tp-link">
+                                    <i data-feather="user"></i>
+                                    <span> Cut List </span>
+                                </a>
+                            </li>
+
+                            <li>
+                                <a href="{{ route('institute.attendance-sheet.index') }}" class="tp-link">
+                                    <i data-feather="user"></i>
+                                    <span> Attendance Sheet </span>
+                                </a>
+                            </li>
+
                             {{-- <li>
                                 <a href="widgets.html" class="tp-link">
                                     <i data-feather="aperture"></i>
