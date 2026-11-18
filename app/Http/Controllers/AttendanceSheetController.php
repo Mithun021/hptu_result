@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Exam;
 use App\Models\ExaminationForm;
+use App\Models\PortalFeature;
 use App\Models\Semester;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -13,180 +14,193 @@ class AttendanceSheetController extends Controller
 
 
     public function index()
-    {
-        $isInstitute = Auth::guard('institute')->check();
+{
+    $isInstitute = Auth::guard('institute')->check();
 
-        $institute = $isInstitute
-            ? Auth::guard('institute')->user()
-            : null;
+    $institute = $isInstitute
+        ? Auth::guard('institute')->user()
+        : null;
 
-        /*
-        |--------------------------------------------------------------------------
-        | Select View According To Logged-in Guard
-        |--------------------------------------------------------------------------
-        */
+    /*
+    |--------------------------------------------------------------------------
+    | Select View According To Logged-in Guard
+    |--------------------------------------------------------------------------
+    */
 
-        $viewPath = $isInstitute
-            ? 'institute.attendance-sheet.index'
-            : 'backend.attendance-sheet.index';
+    $viewPath = $isInstitute
+        ? 'institute.attendance-sheet.index'
+        : 'backend.attendance-sheet.index';
 
-        /*
-        |--------------------------------------------------------------------------
-        | Select Attendance Sheet URL According To Guard
-        |--------------------------------------------------------------------------
-        */
+    /*
+    |--------------------------------------------------------------------------
+    | Institute Feature Access
+    |--------------------------------------------------------------------------
+    */
 
-        $attendanceRoute = $isInstitute
-            ? 'institute.attendance-sheet.index'
-            : 'backend.attendance-sheet.index';
+    if ($isInstitute) {
 
-        /*
-        |--------------------------------------------------------------------------
-        | Fetch Active Exam IDs
-        |--------------------------------------------------------------------------
-        */
+        $portalFeature = PortalFeature::first();
 
-        $activeExamIds = Exam::where('is_active', 1)
-            ->pluck('id');
+        if (!$portalFeature || !$portalFeature->attendance_sheet) {
 
-        /*
-        |--------------------------------------------------------------------------
-        | Fetch And Sort Semesters In Roman Order
-        |--------------------------------------------------------------------------
-        */
+            return view($viewPath, [
+                'groups' => collect(),
+                'semesters' => collect(),
+                'isInstitute' => $isInstitute,
+                'instituteName' => $institute->name ?? 'Institute',
+                'attendanceRoute' => 'institute.attendance-sheet.index',
+                'isDisabled' => true,
+                'disabledMessage' => 'This facility is temporarily unavailable for your institute. For any enquiry or assistance, please contact the University Administrator.',
+            ]);
+        }
+    }
 
-        $romanOrder = [
-            'I'      => 1,
-            'II'     => 2,
-            'III'    => 3,
-            'IV'     => 4,
-            'V'      => 5,
-            'VI'     => 6,
-            'VII'    => 7,
-            'VIII'   => 8,
-            'IX'     => 9,
-            'X'      => 10,
-            'XI'     => 11,
-            'XII'    => 12,
+    /*
+    |--------------------------------------------------------------------------
+    | Select Attendance Sheet URL According To Guard
+    |--------------------------------------------------------------------------
+    */
+
+    $attendanceRoute = $isInstitute
+        ? 'institute.attendance-sheet.index'
+        : 'backend.attendance-sheet.index';
+
+    /*
+    |--------------------------------------------------------------------------
+    | Fetch Active Exam IDs
+    |--------------------------------------------------------------------------
+    */
+
+    $activeExamIds = Exam::where('is_active', 1)
+        ->pluck('id');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Fetch And Sort Semesters In Roman Order
+    |--------------------------------------------------------------------------
+    */
+
+    $romanOrder = [
+        'I'      => 1,
+        'II'     => 2,
+        'III'    => 3,
+        'IV'     => 4,
+        'V'      => 5,
+        'VI'     => 6,
+        'VII'    => 7,
+        'VIII'   => 8,
+        'IX'     => 9,
+        'X'      => 10,
+        'XI'     => 11,
+        'XII'    => 12,
+    ];
+
+    $semesters = Semester::all()
+        ->sortBy(function ($semester) use ($romanOrder) {
+            $name = strtoupper(trim($semester->name));
+
+            return $romanOrder[$name] ?? 999999;
+        })
+        ->values();
+
+    /*
+    |--------------------------------------------------------------------------
+    | Fetch Paid Forms Of Active Exams
+    |--------------------------------------------------------------------------
+    */
+
+    $forms = ExaminationForm::with([
+            'course',
+            'scheme',
+            'branch',
+        ])
+        ->whereIn('exam_id', $activeExamIds)
+        ->where('payment_status', 1)
+        ->whereNotNull('semester_id')
+        ->when($isInstitute, function ($query) use ($institute) {
+            $query->where('exam_center_id', $institute->id);
+        })
+        ->get();
+
+    /*
+    |--------------------------------------------------------------------------
+    | Group By Exam + Exam Type + Course + Scheme + Branch
+    |--------------------------------------------------------------------------
+    */
+
+    $groupedForms = $forms->groupBy(function ($form) {
+        return implode('_', [
+            $form->exam_id ?? 0,
+            $form->exam_type ?? '',
+            $form->course_id ?? 0,
+            $form->scheme_id ?? 0,
+            $form->branch_id ?? 0,
+        ]);
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Prepare Semester-wise Attendance Summary
+    |--------------------------------------------------------------------------
+    */
+
+    $groups = $groupedForms->map(function ($groupForms) use ($semesters) {
+
+        $firstForm = $groupForms->first();
+
+        $semesterCounts = $groupForms
+            ->groupBy('semester_id')
+            ->map(function ($semesterForms) {
+                return $semesterForms->count();
+            });
+
+        $semesterData = [];
+
+        foreach ($semesters as $semester) {
+
+            $count = $semesterCounts->get($semester->id, 0);
+
+            $semesterData[$semester->id] = [
+                'semester_id' => $semester->id,
+                'semester_name' => $semester->name,
+                'count' => $count,
+            ];
+        }
+
+        return [
+            'exam_id' => $firstForm->exam_id,
+            'exam_type' => $firstForm->exam_type,
+
+            'course_id' => $firstForm->course_id,
+            'scheme_id' => $firstForm->scheme_id,
+            'branch_id' => $firstForm->branch_id,
+
+            'course_name' => $firstForm->course->name ?? 'N/A',
+            'scheme_name' => $firstForm->scheme->name ?? 'NA',
+            'branch_name' => $firstForm->branch->name ?? 'NA',
+
+            'semesters' => $semesterData,
+
+            'total_forms' => $groupForms->count(),
         ];
 
-        $semesters = Semester::all()
-            ->sortBy(function ($semester) use ($romanOrder) {
-                $name = strtoupper(trim($semester->name));
+    })->values();
 
-                return $romanOrder[$name] ?? 999999;
-            })
-            ->values();
+    /*
+    |--------------------------------------------------------------------------
+    | Return Selected Portal View
+    |--------------------------------------------------------------------------
+    */
 
-        /*
-        |--------------------------------------------------------------------------
-        | Fetch Paid Forms Of Active Exams
-        |--------------------------------------------------------------------------
-        */
-
-        $forms = ExaminationForm::with([
-                'course',
-                'scheme',
-                'branch',
-            ])
-            ->whereIn('exam_id', $activeExamIds)
-            ->where('payment_status', 1)
-            ->whereNotNull('semester_id')
-            ->when($isInstitute, function ($query) use ($institute) {
-                $query->where('exam_center_id', $institute->id);
-            })
-            ->get();
-
-        /*
-        |--------------------------------------------------------------------------
-        | Group By Exam + Exam Type + Course + Scheme + Branch
-        |--------------------------------------------------------------------------
-        */
-
-        $groupedForms = $forms->groupBy(function ($form) {
-            return implode('_', [
-                $form->exam_id ?? 0,
-                $form->exam_type ?? '',
-                $form->course_id ?? 0,
-                $form->scheme_id ?? 0,
-                $form->branch_id ?? 0,
-            ]);
-        });
-
-        /*
-        |--------------------------------------------------------------------------
-        | Prepare Semester-wise Attendance Summary
-        |--------------------------------------------------------------------------
-        */
-
-        $groups = $groupedForms->map(function ($groupForms) use ($semesters) {
-
-            $firstForm = $groupForms->first();
-
-            /*
-            |--------------------------------------------------------------------------
-            | Count Paid Forms Semester-wise
-            |--------------------------------------------------------------------------
-            */
-
-            $semesterCounts = $groupForms
-                ->groupBy('semester_id')
-                ->map(function ($semesterForms) {
-                    return $semesterForms->count();
-                });
-
-            /*
-            |--------------------------------------------------------------------------
-            | Prepare All Semester Columns
-            |--------------------------------------------------------------------------
-            */
-
-            $semesterData = [];
-
-            foreach ($semesters as $semester) {
-
-                $count = $semesterCounts->get($semester->id, 0);
-
-                $semesterData[$semester->id] = [
-                    'semester_id' => $semester->id,
-                    'semester_name' => $semester->name,
-                    'count' => $count,
-                ];
-            }
-
-            return [
-                'exam_id' => $firstForm->exam_id,
-                'exam_type' => $firstForm->exam_type,
-
-                'course_id' => $firstForm->course_id,
-                'scheme_id' => $firstForm->scheme_id,
-                'branch_id' => $firstForm->branch_id,
-
-                'course_name' => $firstForm->course->name ?? 'N/A',
-                'scheme_name' => $firstForm->scheme->name ?? 'NA',
-                'branch_name' => $firstForm->branch->name ?? 'NA',
-
-                'semesters' => $semesterData,
-
-                'total_forms' => $groupForms->count(),
-            ];
-
-        })->values();
-
-        /*
-        |--------------------------------------------------------------------------
-        | Return Selected Portal View
-        |--------------------------------------------------------------------------
-        */
-
-        return view($viewPath, [
-            'groups' => $groups,
-            'semesters' => $semesters,
-            'isInstitute' => $isInstitute,
-            'instituteName' => $institute->name ?? 'All Institutes',
-            'attendanceRoute' => $attendanceRoute,
-        ]);
-    }
+    return view($viewPath, [
+        'groups' => $groups,
+        'semesters' => $semesters,
+        'isInstitute' => $isInstitute,
+        'instituteName' => $institute->name ?? 'All Institutes',
+        'attendanceRoute' => $attendanceRoute,
+        'isDisabled' => false,
+    ]);
+}
 
     public function show(Request $request)
     {

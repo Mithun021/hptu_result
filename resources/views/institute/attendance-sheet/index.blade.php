@@ -202,6 +202,30 @@
 
 <div class="attendance-wrapper" id="attendancePrintArea">
 
+    @if(!empty($isDisabled))
+
+        <div class="card">
+            <div class="card-body text-center" style="padding: 50px 20px;">
+
+                <i data-feather="alert-circle"
+                style="width: 50px; height: 50px; color: #dc3545;">
+                </i>
+
+                <h4 class="mt-3">
+                    Attendance Sheet Temporarily Unavailable
+                </h4>
+
+                <p class="text-muted mt-2 mb-0">
+                    {{ $disabledMessage }}
+                </p>
+
+            </div>
+        </div>
+
+    @else
+
+
+
     <div class="attendance-top">
         <h4>Attendance Sheet</h4>
 
@@ -295,6 +319,9 @@
         <div class="attendance-empty">
             No paid examination forms found for active exams.
         </div>
+
+    @endif
+
 
     @endif
 
