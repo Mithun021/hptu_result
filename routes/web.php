@@ -20,6 +20,7 @@ use App\Http\Controllers\FrontsheetController;
 use App\Http\Controllers\GraceMarkPolicyController;
 use App\Http\Controllers\GraceMarksController;
 use App\Http\Controllers\InstituteController;
+use App\Http\Controllers\ManageExamFormController;
 use App\Http\Controllers\MarksGradeController;
 use App\Http\Controllers\MidSemExamController;
 use App\Http\Controllers\PassPercentageController;
@@ -372,6 +373,10 @@ Route::middleware(['backend.auth'])->prefix('backend')->group(function () {
     });
 
     // Examination form Data ---------------------------------------------
+
+    Route::get('/examination-form', [ManageExamFormController::class, 'index']) ->name('admin.examination-form.index');
+    Route::get('/examination-form/fetch', [ManageExamFormController::class, 'fetchExamForms']) ->name('admin.examination-form.fetch');
+    Route::get('/examination-form/{id}/edit', [ManageExamFormController::class, 'edit']) ->name('admin.examination-form.edit');
 
     Route::get('cutlist', [CutlistController::class, 'index']) ->name('admin.cutlist.index');
     Route::get('attendance-sheet', [AttendanceSheetController::class, 'index']) ->name('admin.attendance-sheet.index');

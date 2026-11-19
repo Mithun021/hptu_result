@@ -44,7 +44,6 @@ class AssignSubjectController extends Controller
     //     return view('institute.teacher.assign-subjects', compact('assignments'));
     // }
 
-
     public function assign_subject()
     {
         $authUser = auth('institute')->user();
@@ -63,7 +62,7 @@ class AssignSubjectController extends Controller
             'course',
             'scheme',
             'branch',
-            'batch',
+            'batches',
             'semester',
             'annualSemester',
             'subjects',
@@ -82,7 +81,6 @@ class AssignSubjectController extends Controller
             compact('assignments')
         );
     }
-
 
     public function create_assign_subject()
     {
@@ -106,14 +104,19 @@ class AssignSubjectController extends Controller
         /* ================= VALIDATION ================= */
 
         $request->validate([
-            'course_id'     => 'required|exists:courses,id',
-            'scheme_id'     => 'required|exists:schemes,id',
-            'branch_id'     => 'required|exists:branches,id',
-            'semester_id'   => 'required|exists:semesters,id',
-            'batch_id'      => 'required|exists:batches,id',
-            'teacher_id'    => 'required|exists:institutes,id',
-            'subject_ids'   => 'required|array|min:1',
-            'subject_ids.*' => 'required|distinct|exists:subjects,id',
+            'course_id'       => 'required|exists:courses,id',
+            'scheme_id'       => 'required|exists:schemes,id',
+            'branch_id'       => 'required|exists:branches,id',
+
+            'semester_id'     => 'required|exists:semesters,id',
+
+            'batch_ids'       => 'required|array|min:1',
+            'batch_ids.*'     => 'required|distinct|exists:batches,id',
+
+            'teacher_id'      => 'required|exists:institutes,id',
+
+            'subject_ids'     => 'required|array|min:1',
+            'subject_ids.*'   => 'required|distinct|exists:subjects,id',
         ]);
 
         /* ================= AUTH USER ================= */
@@ -142,7 +145,6 @@ class AssignSubjectController extends Controller
                 'course_id'          => $request->course_id,
                 'scheme_id'          => $request->scheme_id,
                 'branch_id'          => $request->branch_id,
-                'batch_id'           => $request->batch_id,
                 'semester_id'        => $request->semester_id,
                 'annual_semester_id' => null,
             ]);
@@ -156,8 +158,20 @@ class AssignSubjectController extends Controller
                 ];
             }
 
-            // Using subjectList() relationship from AssignTeacherSubject model
             $assignment->subjectList()->createMany($subjectData);
+
+
+            // Batch mapping table: assign_teacher_subject_batches
+            $batchData = [];
+
+            foreach ($request->batch_ids as $batch_id) {
+                $batchData[] = [
+                    'batch_id' => $batch_id,
+                ];
+            }
+
+            $assignment->batchList()->createMany($batchData);
+
         });
 
         /* ================= REDIRECT ================= */
@@ -167,7 +181,6 @@ class AssignSubjectController extends Controller
             ->with('success', 'Subjects Assigned Successfully');
     }
 
-
     public function edit_assign_subject($id)
     {
         $authUser = auth('institute')->user();
@@ -176,20 +189,21 @@ class AssignSubjectController extends Controller
             ? $authUser->id
             : $authUser->institute_id;
 
-        // Fetch assignment using assignment ID
+        // Fetch assignment
         $query = AssignTeacherSubject::with([
             'teacher',
             'course',
             'scheme',
             'branch',
-            'batch',
+            'batches',
             'semester',
             'annualSemester',
             'subjects',
-        ])->where('id', $id)
+        ])
+        ->where('id', $id)
         ->where('institute_id', $institute_id);
 
-        // Teacher login can access only own assignment
+        // Teacher can access only own assignment
         if ($authUser->account_type !== 'institute') {
             $query->where('teacher_id', $authUser->id);
         }
@@ -206,17 +220,22 @@ class AssignSubjectController extends Controller
             ->pluck('id')
             ->values();
 
-        return view('institute.teacher.edit-assign-subjects', [
-            'assignment'          => $assignment,
-            'teacher'             => $assignment->teacher,
-            'courses'             => $courses,
-            'assignedSubjectIds'  => $assignedSubjectIds,
+        // Existing assigned batch IDs
+        $selectedBatchIds = $assignment->batches
+            ->pluck('id')
+            ->values();
 
-            'selectedCourse'      => $assignment->course_id,
-            'selectedScheme'      => $assignment->scheme_id,
-            'selectedBranch'      => $assignment->branch_id,
-            'selectedBatch'       => $assignment->batch_id,
-            'selectedSemester'    => $assignment->semester_id,
+        return view('institute.teacher.edit-assign-subjects', [
+            'assignment'             => $assignment,
+            'teacher'                => $assignment->teacher,
+            'courses'                => $courses,
+            'assignedSubjectIds'     => $assignedSubjectIds,
+            'selectedBatchIds'       => $selectedBatchIds,
+
+            'selectedCourse'         => $assignment->course_id,
+            'selectedScheme'         => $assignment->scheme_id,
+            'selectedBranch'         => $assignment->branch_id,
+            'selectedSemester'       => $assignment->semester_id,
             'selectedAnnualSemester' => $assignment->annual_semester_id,
         ]);
     }
@@ -226,14 +245,20 @@ class AssignSubjectController extends Controller
         /* ================= VALIDATION ================= */
 
         $request->validate([
-            'course_id'     => 'required|exists:courses,id',
-            'scheme_id'     => 'required|exists:schemes,id',
-            'branch_id'     => 'required|exists:branches,id',
-            'semester_id'   => 'required|exists:semesters,id',
-            'batch_id'      => 'required|exists:batches,id',
-            'subject_ids'   => 'required|array|min:1',
-            'subject_ids.*' => 'required|distinct|exists:subjects,id',
+            'course_id'       => 'required|exists:courses,id',
+            'scheme_id'       => 'required|exists:schemes,id',
+            'branch_id'       => 'required|exists:branches,id',
+
+            'semester_id'     => 'required|exists:semesters,id',
+
+            'batch_ids'       => 'required|array|min:1',
+            'batch_ids.*'     => 'required|distinct|exists:batches,id',
+
+            'subject_ids'     => 'required|array|min:1',
+            'subject_ids.*'   => 'required|distinct|exists:subjects,id',
         ]);
+
+        /* ================= AUTH USER ================= */
 
         $authUser = auth('institute')->user();
 
@@ -280,15 +305,13 @@ class AssignSubjectController extends Controller
                 'course_id'          => $request->course_id,
                 'scheme_id'          => $request->scheme_id,
                 'branch_id'          => $request->branch_id,
-                'batch_id'           => $request->batch_id,
                 'semester_id'        => $request->semester_id,
                 'annual_semester_id' => null,
             ]);
 
-            // Remove previous subject records
+            // Update subjects
             $assignment->subjectList()->delete();
 
-            // Insert updated subjects
             $subjectData = [];
 
             foreach ($subjectIds as $subjectId) {
@@ -298,6 +321,10 @@ class AssignSubjectController extends Controller
             }
 
             $assignment->subjectList()->createMany($subjectData);
+
+            // Update batch mappings
+            // Old batch mappings will be removed and new ones inserted
+            $assignment->batches()->sync($request->batch_ids);
         });
 
         return redirect()
@@ -309,12 +336,11 @@ class AssignSubjectController extends Controller
     {
         $authUser = auth('institute')->user();
 
-        // Determine Institute ID
         $institute_id = $authUser->account_type === 'institute'
             ? $authUser->id
             : $authUser->institute_id;
 
-        // Fetch Assignment
+        // Fetch assignment
         $query = AssignTeacherSubject::where('id', $id)
             ->where('institute_id', $institute_id);
 
@@ -325,9 +351,17 @@ class AssignSubjectController extends Controller
 
         $assignment = $query->firstOrFail();
 
-        // Delete assignment
-        // Child subject records will automatically delete via cascadeOnDelete()
-        $assignment->delete();
+        DB::transaction(function () use ($assignment) {
+
+            // Delete subject mappings
+            $assignment->subjectList()->delete();
+
+            // Delete batch mappings
+            $assignment->batchList()->delete();
+
+            // Delete parent assignment
+            $assignment->delete();
+        });
 
         return redirect()
             ->route('assign.subject')

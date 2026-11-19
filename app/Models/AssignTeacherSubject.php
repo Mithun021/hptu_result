@@ -17,7 +17,6 @@ class AssignTeacherSubject extends Model
         'course_id',
         'scheme_id',
         'branch_id',
-        'batch_id',
         'semester_id',
         'annual_semester_id',
     ];
@@ -49,10 +48,27 @@ class AssignTeacherSubject extends Model
         return $this->belongsTo(Branch::class, 'branch_id');
     }
 
-    public function batch()
+    /* ================= BATCH RELATIONSHIPS ================= */
+
+    public function batchList()
     {
-        return $this->belongsTo(Batch::class, 'batch_id');
+        return $this->hasMany(
+            AssignTeacherSubjectBatch::class,
+            'assign_teacher_subject_id'
+        );
     }
+
+    public function batches()
+    {
+        return $this->belongsToMany(
+            Batch::class,
+            'assign_teacher_subject_batches',
+            'assign_teacher_subject_id',
+            'batch_id'
+        )->withTimestamps();
+    }
+
+    
 
     public function semester()
     {

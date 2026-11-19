@@ -233,6 +233,7 @@ $(document).ready(function () {
     // =========================
     // LOAD SUBJECTS
     // =========================
+
     function loadSubjects() {
 
         let courseType = $('#course_type').val();
@@ -243,36 +244,54 @@ $(document).ready(function () {
         let semesterId = $('#semester_id').val();
         let annualSemesterId = $('#annual_semester_id').val();
 
-        if (!courseId || !branchId || !batchId) {
-            $('#subject_id').html(
-                '<option value="">--Select Subject--</option>'
+        let subjectDropdown = $('#subject_id');
+
+        // =========================
+        // BASIC VALIDATION
+        // =========================
+        if (!courseId || !branchId) {
+            subjectDropdown.html(
+                '<option value="">Please select course and branch</option>'
+            );
+            return;
+        }
+
+        // Teacher portal requires batch
+        if ($('#batch_id').length && !batchId) {
+            subjectDropdown.html(
+                '<option value="">Please select batch</option>'
             );
             return;
         }
 
         if (courseType === 'Semester Based' && !semesterId) {
-            $('#subject_id').html(
-                '<option value="">--Select Subject--</option>'
+            subjectDropdown.html(
+                '<option value="">Please select semester</option>'
             );
             return;
         }
 
         if (courseType === 'Annual Based' && !annualSemesterId) {
-            $('#subject_id').html(
-                '<option value="">--Select Subject--</option>'
+            subjectDropdown.html(
+                '<option value="">Please select annual semester</option>'
             );
             return;
         }
 
-        $('#subject_id').html(
-            '<option value="">Please wait...</option>'
+        subjectDropdown.html(
+            '<option value="">Loading subjects...</option>'
         );
 
+        // =========================
+        // AJAX REQUEST
+        // =========================
         $.ajax({
 
             url: "{{ url('institute/subjects/filter') }}",
 
             type: "GET",
+
+            dataType: "json",
 
             data: {
                 course_type: courseType,
@@ -284,42 +303,135 @@ $(document).ready(function () {
                 annual_semester_id: annualSemesterId
             },
 
-            success: function (subjects) {
+            success: function (response) {
 
-                $('#subject_id').html(
-                    '<option value="">--Select Subject--</option>'
+                subjectDropdown.empty();
+
+                // =========================
+                // SERVER RESPONSE CHECK
+                // =========================
+                if (!response.success) {
+
+                    subjectDropdown.append(
+                        $('<option>', {
+                            value: '',
+                            text: response.message || 'Unable to load subjects'
+                        })
+                    );
+
+                    console.error('Subject API Error:', response);
+
+                    return;
+                }
+
+                let subjects = response.data || [];
+
+                subjectDropdown.append(
+                    $('<option>', {
+                        value: '',
+                        text: '--Select Subject--'
+                    })
                 );
 
+                // =========================
+                // SUBJECTS FOUND
+                // =========================
                 if (subjects.length > 0) {
 
-                    $.each(subjects, function (_, subject) {
+                    $.each(subjects, function (index, subject) {
 
-                        $('#subject_id').append(
+                        subjectDropdown.append(
                             $('<option>', {
                                 value: subject.id,
-                                text: subject.name
+                                text: subject.name +
+                                    (subject.subject_code
+                                        ? ' (' + subject.subject_code + ')'
+                                        : '')
                             })
                         );
 
                     });
 
+                    console.log('Subjects Loaded:', subjects);
+
                 } else {
 
-                    $('#subject_id').html(
-                        '<option value="">No Subject Found</option>'
+                    subjectDropdown.empty().append(
+                        $('<option>', {
+                            value: '',
+                            text: 'No Subject Found'
+                        })
                     );
 
+                    console.warn('No Subject Found. Debug Details:', response.debug);
+
+                    console.table(response.debug ? {
+                        login_type: response.debug.login_type,
+                        teacher_id: response.debug.teacher_id,
+                        matching_assignments: response.debug.matching_assignments,
+                        assignments_with_selected_batch: response.debug.assignments_with_selected_batch,
+                        assigned_subject_ids: JSON.stringify(response.debug.assigned_subject_ids),
+                        subjects_before_teacher_assignment_filter: response.debug.subjects_before_teacher_assignment_filter,
+                        final_subject_count: response.debug.final_subject_count
+                    } : {});
                 }
 
             },
 
-            error: function (xhr) {
+            // =========================
+            // AJAX ERROR
+            // =========================
+            error: function (xhr, status, error) {
 
-                console.log(xhr.responseText);
+                subjectDropdown.empty();
 
-                $('#subject_id').html(
-                    '<option value="">Failed to load subjects</option>'
+                let message = 'Failed to load subjects.';
+
+                let response = xhr.responseJSON;
+
+                if (response) {
+
+                    message = response.message || message;
+
+                    // Validation errors
+                    if (response.errors) {
+
+                        let validationMessages = [];
+
+                        $.each(response.errors, function (field, errors) {
+                            validationMessages.push(
+                                field + ': ' + errors.join(', ')
+                            );
+                        });
+
+                        message += ' ' + validationMessages.join(' | ');
+                    }
+
+                    if (response.error) {
+                        message += ' ' + response.error;
+                    }
+
+                } else if (xhr.responseText) {
+
+                    message += ' Server Response: ' +
+                        xhr.responseText.substring(0, 300);
+
+                }
+
+                subjectDropdown.append(
+                    $('<option>', {
+                        value: '',
+                        text: message.substring(0, 180)
+                    })
                 );
+
+                console.error('Subject AJAX Error:', {
+                    status: xhr.status,
+                    ajaxStatus: status,
+                    error: error,
+                    response: response,
+                    responseText: xhr.responseText
+                });
 
             }
 
@@ -331,10 +443,11 @@ $(document).ready(function () {
     // =========================
     // SUBJECT FILTER CHANGE
     // =========================
-    $('#branch_id, #scheme_id, #batch_id, #semester_id, #annual_semester_id')
+    $('#course_id, #branch_id, #scheme_id, #batch_id, #semester_id, #annual_semester_id')
         .on('change', function () {
             loadSubjects();
         });
+
 
     // =========================
     // LOAD COURSE DATA

@@ -1,3 +1,4 @@
+
 @extends('institute.partial.master')
 
 @section('title', 'Edit Assign Subjects')
@@ -5,8 +6,65 @@
 
 @section('institute-content')
 
-<div class="card">
+<style>
+    .assignment-wrapper {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 5px;
+    }
 
+    .assignment-section {
+        border: 1px solid #e5e7eb;
+        border-radius: 5px;
+        padding: 15px;
+        background: #fff;
+        max-height: 250px;
+        overflow-y: auto;
+    }
+
+    .assignment-section .form-check {
+        padding: 7px 10px 7px 30px;
+        border-bottom: 1px solid #f1f1f1;
+        margin-bottom: 0;
+    }
+
+    .assignment-section .form-check:last-child {
+        border-bottom: none;
+    }
+
+    .assignment-section .form-check:hover {
+        background: #f8f9fa;
+    }
+
+    .assignment-section .form-check-input {
+        cursor: pointer;
+    }
+
+    .assignment-section .form-check-label {
+        cursor: pointer;
+        width: 100%;
+    }
+
+    .assignment-label {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+
+    .assignment-count {
+        font-size: 12px;
+        color: #6c757d;
+    }
+
+    .required {
+        color: red;
+    }
+</style>
+
+<div class="card assignment-wrapper">
+
+    {{-- ================= HEADER ================= --}}
     <div class="card-header d-flex justify-content-between align-items-center">
         <h4 class="card-title m-0">Edit Assigned Subjects</h4>
 
@@ -15,7 +73,11 @@
         </a>
     </div>
 
-    <form action="{{ route('update.assign.subject', $assignment->id) }}" method="POST">
+    {{-- ================= FORM ================= --}}
+    <form action="{{ route('update.assign.subject', $assignment->id) }}"
+          method="POST"
+          id="editAssignmentForm">
+
         @csrf
         @method('PUT')
 
@@ -24,7 +86,7 @@
             <div class="row">
 
                 {{-- Course Type --}}
-                <div class="col-md-4 form-group mb-2 d-none">
+                <div class="col-md-4 form-group mb-3 d-none">
                     <label>Course Type</label>
 
                     <select name="course_type" id="course_type" class="form-control">
@@ -33,10 +95,14 @@
                 </div>
 
                 {{-- Course --}}
-                <div class="col-md-4 form-group mb-2">
-                    <label>Select Course <span class="text-danger">*</span></label>
+                <div class="col-md-4 form-group mb-3">
+                    <label>
+                        Select Course <span class="required">*</span>
+                    </label>
 
-                    <select name="course_id" id="course_id" class="form-control" required>
+                    <select name="course_id" id="course_id"
+                            class="form-control" required>
+
                         <option value="">--Select Course--</option>
 
                         @foreach($courses as $course)
@@ -54,11 +120,16 @@
                 </div>
 
                 {{-- Scheme --}}
-                <div class="col-md-4 form-group mb-2">
-                    <label>Select Scheme <span class="text-danger">*</span></label>
+                <div class="col-md-4 form-group mb-3">
+                    <label>
+                        Select Scheme <span class="required">*</span>
+                    </label>
 
-                    <select name="scheme_id" id="scheme_id" class="form-control" required>
+                    <select name="scheme_id" id="scheme_id"
+                            class="form-control" required>
+
                         <option value="">--Select Scheme--</option>
+
                     </select>
 
                     @error('scheme_id')
@@ -67,11 +138,16 @@
                 </div>
 
                 {{-- Branch --}}
-                <div class="col-md-4 form-group mb-2">
-                    <label>Select Branch <span class="text-danger">*</span></label>
+                <div class="col-md-4 form-group mb-3">
+                    <label>
+                        Select Branch <span class="required">*</span>
+                    </label>
 
-                    <select name="branch_id" id="branch_id" class="form-control" required>
+                    <select name="branch_id" id="branch_id"
+                            class="form-control" required>
+
                         <option value="">--Select Branch--</option>
+
                     </select>
 
                     @error('branch_id')
@@ -79,25 +155,17 @@
                     @enderror
                 </div>
 
-                {{-- Batch --}}
-                <div class="col-md-4 form-group mb-2">
-                    <label>Select Batch <span class="text-danger">*</span></label>
-
-                    <select name="batch_id" id="batch_id" class="form-control" required>
-                        <option value="">--Select Batch--</option>
-                    </select>
-
-                    @error('batch_id')
-                        <small class="text-danger">{{ $message }}</small>
-                    @enderror
-                </div>
-
                 {{-- Semester --}}
-                <div class="col-md-4 form-group mb-2" id="semester_container">
-                    <label>Select Semester <span class="text-danger">*</span></label>
+                <div class="col-md-4 form-group mb-3" id="semester_container">
+                    <label>
+                        Select Semester <span class="required">*</span>
+                    </label>
 
-                    <select name="semester_id" id="semester_id" class="form-control" required>
+                    <select name="semester_id" id="semester_id"
+                            class="form-control" required>
+
                         <option value="">--Select Semester--</option>
+
                     </select>
 
                     @error('semester_id')
@@ -106,7 +174,7 @@
                 </div>
 
                 {{-- Teacher --}}
-                <div class="col-md-4 form-group mb-2">
+                <div class="col-md-4 form-group mb-3">
                     <label>Teacher</label>
 
                     <input type="text"
@@ -115,16 +183,53 @@
                            readonly>
                 </div>
 
-                {{-- Subjects --}}
-                <div class="col-md-12 form-group mb-2">
+                {{-- ================= BATCHES ================= --}}
+                <div class="col-md-12 form-group mb-3">
 
-                    <label>
-                        Select Subjects <span class="text-danger">*</span>
-                    </label>
+                    <div class="assignment-label">
+                        <label class="mb-0">
+                            Select Batches <span class="required">*</span>
+                        </label>
+
+                        <span class="assignment-count" id="batch_count">
+                            0 Selected
+                        </span>
+                    </div>
+
+                    <div id="batch_checkbox_container"
+                         class="assignment-section">
+
+                        <div class="text-muted">
+                            Loading batches...
+                        </div>
+
+                    </div>
+
+                    @error('batch_ids')
+                        <small class="text-danger">{{ $message }}</small>
+                    @enderror
+
+                    @error('batch_ids.*')
+                        <small class="text-danger">{{ $message }}</small>
+                    @enderror
+
+                </div>
+
+                {{-- ================= SUBJECTS ================= --}}
+                <div class="col-md-12 form-group mb-3">
+
+                    <div class="assignment-label">
+                        <label class="mb-0">
+                            Select Subjects <span class="required">*</span>
+                        </label>
+
+                        <span class="assignment-count" id="subject_count">
+                            0 Selected
+                        </span>
+                    </div>
 
                     <div id="subject_checkbox_container"
-                         class="border rounded p-3"
-                         style="max-height:250px; overflow-y:auto;">
+                         class="assignment-section">
 
                         <div class="text-muted">
                             Loading subjects...
@@ -146,10 +251,11 @@
 
         </div>
 
+        {{-- ================= FOOTER ================= --}}
         <div class="card-footer">
 
             <button type="submit" class="btn btn-primary">
-                Update Subjects
+                <i class="fas fa-save"></i> Update Subjects
             </button>
 
             <a href="{{ route('assign.subject') }}" class="btn btn-secondary">
@@ -167,22 +273,52 @@
 <script>
 $(document).ready(function () {
 
-    /* =========================
+    /* ==========================================
        SELECTED VALUES
-    ==========================*/
+    ========================================== */
 
-    let selectedScheme = "{{ old('scheme_id', $selectedScheme) }}";
-    let selectedBranch = "{{ old('branch_id', $selectedBranch) }}";
-    let selectedBatch = "{{ old('batch_id', $selectedBatch) }}";
-    let selectedSemester = "{{ old('semester_id', $selectedSemester) }}";
+    let selectedScheme = @json((string) old('scheme_id', $selectedScheme));
 
-    let assignedSubjects = @json(old('subject_ids', $assignedSubjectIds));
+    let selectedBranch = @json((string) old('branch_id', $selectedBranch));
+
+    let selectedSemester = @json((string) old('semester_id', $selectedSemester));
+
+    let selectedBatchIds = @json(
+        old('batch_ids', $selectedBatchIds->values()->all())
+    );
+
+    let assignedSubjects = @json(
+        old('subject_ids', $assignedSubjectIds->values()->all())
+    );
+
+    selectedBatchIds = selectedBatchIds.map(id => String(id));
 
     assignedSubjects = assignedSubjects.map(id => String(id));
 
-    /* =========================
+
+    /* ==========================================
+       UPDATE COUNTS
+    ========================================== */
+
+    function updateBatchCount() {
+
+        let count = $('.batch-checkbox:checked').length;
+
+        $('#batch_count').text(count + ' Selected');
+    }
+
+    function updateSubjectCount() {
+
+        let count = $('.subject-checkbox:checked').length;
+
+        $('#subject_count').text(count + ' Selected');
+    }
+
+
+    /* ==========================================
        LOAD SUBJECTS
-    ==========================*/
+       Batch is not required for subject loading
+    ========================================== */
 
     function loadSubjects() {
 
@@ -190,13 +326,16 @@ $(document).ready(function () {
         let courseId = $('#course_id').val();
         let schemeId = $('#scheme_id').val();
         let branchId = $('#branch_id').val();
-        let batchId = $('#batch_id').val();
         let semesterId = $('#semester_id').val();
 
-        if (!courseId || !schemeId || !branchId || !batchId || !semesterId) {
+        if (!courseId || !schemeId || !branchId || !semesterId) {
+
             $('#subject_checkbox_container').html(
                 '<div class="text-muted">Select all filters to load subjects...</div>'
             );
+
+            updateSubjectCount();
+
             return;
         }
 
@@ -205,7 +344,9 @@ $(document).ready(function () {
         );
 
         $.ajax({
+
             url: "{{ url('subjects/filter') }}",
+
             type: "GET",
 
             data: {
@@ -213,7 +354,6 @@ $(document).ready(function () {
                 course_id: courseId,
                 scheme_id: schemeId,
                 branch_id: branchId,
-                batch_id: batchId,
                 semester_id: semesterId,
                 annual_semester_id: ''
             },
@@ -222,18 +362,18 @@ $(document).ready(function () {
 
                 let html = '';
 
-                if (subjects.length > 0) {
+                if (subjects && subjects.length > 0) {
 
                     $.each(subjects, function (_, subject) {
 
-                        let isChecked = assignedSubjects.includes(String(subject.id))
-                            ? 'checked'
-                            : '';
+                        let isChecked = assignedSubjects.includes(
+                            String(subject.id)
+                        ) ? 'checked' : '';
 
                         html += `
-                            <div class="form-check mb-1">
+                            <div class="form-check">
 
-                                <input class="form-check-input"
+                                <input class="form-check-input subject-checkbox"
                                     type="checkbox"
                                     name="subject_ids[]"
                                     value="${subject.id}"
@@ -244,7 +384,10 @@ $(document).ready(function () {
                                     for="subject_${subject.id}">
 
                                     ${subject.name}
-                                    (<span class="text-primary">${subject.subject_code ?? ''}</span>)
+
+                                    <span class="text-primary">
+                                        (${subject.subject_code ?? ''})
+                                    </span>
 
                                 </label>
 
@@ -259,6 +402,8 @@ $(document).ready(function () {
                 }
 
                 $('#subject_checkbox_container').html(html);
+
+                updateSubjectCount();
             },
 
             error: function () {
@@ -268,22 +413,45 @@ $(document).ready(function () {
                 );
 
             }
+
         });
+
     }
 
 
-    /* =========================
+    /* ==========================================
        LOAD COURSE DATA
-    ==========================*/
+    ========================================== */
 
     function loadCourseData(courseId) {
 
-        if (!courseId) return;
+        if (!courseId) {
+
+            $('#scheme_id').html('<option value="">--Select Scheme--</option>');
+            $('#branch_id').html('<option value="">--Select Branch--</option>');
+            $('#semester_id').html('<option value="">--Select Semester--</option>');
+
+            $('#batch_checkbox_container').html(
+                '<div class="text-muted">Please select course first.</div>'
+            );
+
+            $('#subject_checkbox_container').html(
+                '<div class="text-muted">Please select course first.</div>'
+            );
+
+            updateBatchCount();
+            updateSubjectCount();
+
+            return;
+        }
 
         $('#scheme_id').html('<option value="">Loading...</option>');
         $('#branch_id').html('<option value="">Loading...</option>');
-        $('#batch_id').html('<option value="">Loading...</option>');
         $('#semester_id').html('<option value="">Loading...</option>');
+
+        $('#batch_checkbox_container').html(
+            '<div class="text-muted">Loading batches...</div>'
+        );
 
         $('#subject_checkbox_container').html(
             '<div class="text-muted">Loading course details...</div>'
@@ -301,9 +469,12 @@ $(document).ready(function () {
                 return;
             }
 
-            /* ---------- Branches ---------- */
 
-            $('#branch_id').html('<option value="">--Select Branch--</option>');
+            /* ---------- BRANCHES ---------- */
+
+            $('#branch_id').html(
+                '<option value="">--Select Branch--</option>'
+            );
 
             $.each(branchesData, function (_, branch) {
 
@@ -320,9 +491,11 @@ $(document).ready(function () {
             });
 
 
-            /* ---------- Schemes ---------- */
+            /* ---------- SCHEMES ---------- */
 
-            $('#scheme_id').html('<option value="">--Select Scheme--</option>');
+            $('#scheme_id').html(
+                '<option value="">--Select Scheme--</option>'
+            );
 
             $.each(courseDetails.schemes || [], function (_, scheme) {
 
@@ -339,28 +512,54 @@ $(document).ready(function () {
             });
 
 
-            /* ---------- Batches ---------- */
+            /* ---------- BATCHES ---------- */
 
-            $('#batch_id').html('<option value="">--Select Batch--</option>');
+            let batchHtml = '';
 
             $.each(courseDetails.batches || [], function (_, batch) {
 
-                let selected = String(selectedBatch) === String(batch.id)
-                    ? 'selected'
+                let selected = selectedBatchIds.includes(String(batch.id))
+                    ? 'checked'
                     : '';
 
-                $('#batch_id').append(`
-                    <option value="${batch.id}" ${selected}>
-                        ${batch.name}
-                    </option>
-                `);
+                batchHtml += `
+                    <div class="form-check">
+
+                        <input class="form-check-input batch-checkbox"
+                            type="checkbox"
+                            name="batch_ids[]"
+                            value="${batch.id}"
+                            id="batch_${batch.id}"
+                            ${selected}>
+
+                        <label class="form-check-label"
+                            for="batch_${batch.id}">
+
+                            ${batch.name}
+
+                        </label>
+
+                    </div>
+                `;
 
             });
 
+            if (batchHtml === '') {
 
-            /* ---------- Semesters ---------- */
+                batchHtml = '<div class="text-danger">No Batch Found</div>';
 
-            $('#semester_id').html('<option value="">--Select Semester--</option>');
+            }
+
+            $('#batch_checkbox_container').html(batchHtml);
+
+            updateBatchCount();
+
+
+            /* ---------- SEMESTERS ---------- */
+
+            $('#semester_id').html(
+                '<option value="">--Select Semester--</option>'
+            );
 
             $.each(courseDetails.semesters || [], function (_, semester) {
 
@@ -376,17 +575,22 @@ $(document).ready(function () {
 
             });
 
+
+            /* ---------- LOAD SUBJECTS ---------- */
+
             loadSubjects();
+
         }
 
 
-        /* ---------- Fetch Branches ---------- */
+        /* ---------- FETCH BRANCHES ---------- */
 
         $.get("{{ url('institute/branches') }}/" + courseId)
 
             .done(function (branches) {
 
-                branchesData = branches;
+                branchesData = branches || [];
+
                 branchesLoaded = true;
 
                 finishLoading();
@@ -402,13 +606,14 @@ $(document).ready(function () {
             });
 
 
-        /* ---------- Fetch Course Details ---------- */
+        /* ---------- FETCH COURSE DETAILS ---------- */
 
         $.get("{{ url('courses') }}/" + courseId + "/details")
 
             .done(function (response) {
 
                 courseDetails = response;
+
                 detailsLoaded = true;
 
                 finishLoading();
@@ -416,6 +621,10 @@ $(document).ready(function () {
             })
 
             .fail(function () {
+
+                $('#batch_checkbox_container').html(
+                    '<div class="text-danger">Unable to load batches.</div>'
+                );
 
                 $('#subject_checkbox_container').html(
                     '<div class="text-danger">Unable to load course details.</div>'
@@ -426,18 +635,39 @@ $(document).ready(function () {
     }
 
 
-    /* =========================
+    /* ==========================================
+       BATCH CHECKBOX CHANGE
+    ========================================== */
+
+    $(document).on('change', '.batch-checkbox', function () {
+
+        updateBatchCount();
+
+    });
+
+
+    /* ==========================================
+       SUBJECT CHECKBOX CHANGE
+    ========================================== */
+
+    $(document).on('change', '.subject-checkbox', function () {
+
+        updateSubjectCount();
+
+    });
+
+
+    /* ==========================================
        COURSE CHANGE
-    ==========================*/
+    ========================================== */
 
     $('#course_id').on('change', function () {
 
         selectedScheme = '';
         selectedBranch = '';
-        selectedBatch = '';
         selectedSemester = '';
 
-        // New course means previous subject selection is no longer applicable
+        selectedBatchIds = [];
         assignedSubjects = [];
 
         loadCourseData($(this).val());
@@ -445,30 +675,69 @@ $(document).ready(function () {
     });
 
 
-    /* =========================
+    /* ==========================================
        FILTER CHANGE
-    ==========================*/
+    ========================================== */
 
-    $('#scheme_id, #branch_id, #batch_id, #semester_id').on('change', function () {
+    $('#scheme_id, #branch_id, #semester_id').on('change', function () {
 
         selectedScheme = $('#scheme_id').val();
         selectedBranch = $('#branch_id').val();
-        selectedBatch = $('#batch_id').val();
         selectedSemester = $('#semester_id').val();
+
+        // Clear old subject selection when academic filters change
+        assignedSubjects = [];
 
         loadSubjects();
 
     });
 
 
-    /* =========================
+    /* ==========================================
+       FORM VALIDATION
+    ========================================== */
+
+    $('#editAssignmentForm').on('submit', function (e) {
+
+        let selectedBatches = $('.batch-checkbox:checked').length;
+
+        let selectedSubjectCount = $('.subject-checkbox:checked').length;
+
+        if (selectedBatches === 0) {
+
+            e.preventDefault();
+
+            alert('Please select at least one batch.');
+
+            $('#batch_checkbox_container').focus();
+
+            return false;
+        }
+
+        if (selectedSubjectCount === 0) {
+
+            e.preventDefault();
+
+            alert('Please select at least one subject.');
+
+            $('#subject_checkbox_container').focus();
+
+            return false;
+        }
+
+    });
+
+
+    /* ==========================================
        INITIAL PAGE LOAD
-    ==========================*/
+    ========================================== */
 
     let defaultCourse = $('#course_id').val();
 
     if (defaultCourse) {
+
         loadCourseData(defaultCourse);
+
     }
 
 });

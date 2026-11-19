@@ -208,6 +208,9 @@
                     <div class="collapse" id="examination-form-data">
                         <ul class="nav-second-level">
                             <li>
+                                <a href="{{ route('admin.examination-form.index') }}" class="tp-link">Exam Form List</a>
+                            </li>
+                            <li>
                                 <a href="{{ route('admin.cutlist.index') }}" class="tp-link">Cutlist List</a>
                             </li>
                             <li>

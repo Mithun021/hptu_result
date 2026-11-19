@@ -37,7 +37,7 @@
                 </select>
             </div>
             <div class="col-md-2 form-group mb-2">
-                <label for="scheme_id">Select Scheme</label>
+                <label for="scheme_id">Select Scheme<span class="text-danger">*</span></label>
                 <select name="scheme_id" id="scheme_id" class="form-control">
                     <option value="">--Select--</option>
                 </select>
@@ -50,13 +50,13 @@
                 </select>
             </div>
             <div class="col-md-2 form-group mb-2" id="semester_container"  style="display: none;">
-                <label for="semester_id">Select Semester</label>
+                <label for="semester_id">Select Semester<span class="text-danger">*</span></label>
                 <select name="semester_id" id="semester_id" class="form-control">
                     <option value="">--Select--</option>
                 </select>
             </div>
             <div class="col-md-2 form-group mb-2" id="annual_semester_container"  style="display: none;">
-                <label for="annual_semester_id">Select Annual Terms</label>
+                <label for="annual_semester_id">Select Annual Terms<span class="text-danger">*</span></label>
                 <select name="annual_semester_id" id="annual_semester_id" class="form-control">
                     <option value="">--Select--</option>
                 </select>

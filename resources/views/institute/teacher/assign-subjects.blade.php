@@ -10,10 +10,13 @@
 
     <div class="card-header d-flex justify-content-between align-items-center">
 
-        <h4 class="card-title m-0">List of Assign Subjects to Teachers</h4>
+        <h4 class="card-title m-0">
+            List of Assign Subjects to Teachers
+        </h4>
 
         @if(auth('institute')->user()->account_type == 'institute')
-            <a href="{{ route('create.assign.subject') }}" class="btn btn-sm btn-primary">
+            <a href="{{ route('create.assign.subject') }}"
+               class="btn btn-sm btn-primary">
                 Add New
             </a>
         @endif
@@ -34,7 +37,7 @@
                         <th>Scheme</th>
                         <th>Branch</th>
                         <th>Semester / Annual Terms</th>
-                        <th>Batch</th>
+                        <th>Batch List</th>
                         <th>Subject List</th>
 
                         @if(auth('institute')->user()->account_type == 'institute')
@@ -79,18 +82,35 @@
                                     ?? '-' }}
                             </td>
 
-                            {{-- Batch --}}
-                            <td>
-                                {{ $assignment->batch?->name ?? '-' }}
+                            {{-- Multiple Batches --}}
+                            <td style="min-width: 130px;">
+
+                                @forelse($assignment->batches as $batch)
+
+                                    <span class="badge bg-info text-dark mb-1">
+                                        {{ $batch->name }}
+                                    </span>
+
+                                @empty
+
+                                    <span class="text-danger">
+                                        No Batches Found
+                                    </span>
+
+                                @endforelse
+
                             </td>
 
                             {{-- Subject List --}}
-                            <td>
+                            <td style="min-width: 150px;">
 
                                 @forelse($assignment->subjects as $subject)
 
                                     <span class="badge bg-primary mb-1">
                                         {{ $subject->name }}
+                                        @if($subject->subject_code)
+                                            ({{ $subject->subject_code }})
+                                        @endif
                                     </span>
 
                                 @empty
