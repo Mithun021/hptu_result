@@ -216,6 +216,9 @@
                             <li>
                                 <a href="{{ route('admin.attendance-sheet.index') }}" class="tp-link">Attendance Sheet</a>
                             </li>
+                            <li>
+                                <a href="{{ route('admin.download-exam-form') }}" class="tp-link">Download Exam Form</a>
+                            </li>
                         </ul>
                     </div>
                 </li>

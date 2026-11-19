@@ -298,4 +298,284 @@ class ManageExamFormController extends Controller
             ->with('success', 'Examination form updated successfully.');
     }
 
+    public function downloadExamForm()
+    {
+
+        $exams = Exam::all();
+        $courses = Course::all();
+
+        return view('backend.examination-form.download-exam-form', compact(
+            'exams',
+            'courses'
+        ));
+    }
+
+    public function downloadExamFormSheet(Request $request)
+    {
+        /* ================= VALIDATION ================= */
+
+        $request->validate([
+            'exam_id' => 'required|exists:exams,id',
+            'student_roll_number' => 'nullable|string',
+
+            'course_id' => 'nullable|integer',
+            'scheme_id' => 'nullable|integer',
+            'branch_id' => 'nullable|integer',
+            'semester_id' => 'nullable|integer',
+            'batch_id' => 'nullable|integer',
+            'institute_id' => 'nullable|integer',
+
+            'form_type' => 'required|in:row-wise,column-wise',
+        ]);
+
+        /* ================= BASE QUERY ================= */
+
+        $query = ExaminationForm::with([
+            'student',
+            'course',
+            'branch',
+            'scheme',
+            'semester',
+            'batch',
+            'institute',
+            'examCenter',
+            'choosedSubjects.subject',
+        ])->where('exam_id', $request->exam_id)
+        ->where('payment_status', 1);
+
+        /* ================= STUDENT FILTER ================= */
+
+        if ($request->filled('student_roll_number')) {
+
+            $rollNumber = trim($request->student_roll_number);
+
+            $student = Student::where(
+                'university_roll_no',
+                $rollNumber
+            )->first();
+
+            if ($student) {
+                $query->where('student_id', $student->id);
+            } else {
+                $query->whereRaw('1 = 0');
+            }
+
+        } else {
+
+            /* ================= OTHER FILTERS ================= */
+
+            $filters = [
+                'course_id',
+                'scheme_id',
+                'branch_id',
+                'semester_id',
+                'batch_id',
+                'institute_id',
+            ];
+
+            foreach ($filters as $column) {
+
+                if ($request->filled($column)) {
+
+                    $query->where(
+                        $column,
+                        $request->input($column)
+                    );
+                }
+            }
+        }
+
+        /* ================= FETCH FORMS ================= */
+
+        $examinationForms = $query
+            ->orderBy('id', 'asc')
+            ->get();
+
+        /* ================= FILE NAME ================= */
+
+        $fileName = 'examination-form-' .
+            $request->exam_id . '-' .
+            $request->form_type . '-' .
+            now()->format('YmdHis') . '.csv';
+
+        /* ================= CSV HEADERS ================= */
+
+        if ($request->form_type === 'row-wise') {
+
+            $headers = [
+                'sn',
+                'student_id',
+                'course_name',
+                'branch_name',
+                'scheme',
+                'semester',
+                'section',
+                'student_institute',
+                'exam_center_name',
+                'exam_type',
+                'exam_fee_amount',
+                'code',
+                'name',
+                'type',
+            ];
+
+        } else {
+
+            $headers = [
+                'sn',
+                'student_id',
+                'course_name',
+                'branch_name',
+                'scheme',
+                'semester',
+                'section',
+                'student_institute',
+                'exam_center_name',
+                'form_id',
+                'exam_type',
+                'exam_fee_amount',
+                'concatenated_subject_codes',
+                'last_appearning_session',
+                'last_appearing_year',
+            ];
+        }
+
+        /* ================= DOWNLOAD CSV ================= */
+
+        return response()->streamDownload(function () use (
+            $examinationForms,
+            $headers,
+            $request
+        ) {
+
+            $file = fopen('php://output', 'w');
+
+            // Excel UTF-8 support
+            fwrite($file, "\xEF\xBB\xBF");
+
+            // CSV Header
+            fputcsv($file, $headers);
+
+            $sn = 1;
+
+            foreach ($examinationForms as $form) {
+
+                /* ================= COMMON DETAILS ================= */
+
+                $studentId = $form->student->university_roll_no
+                    ?? $form->student_id
+                    ?? '';
+
+                $courseName = $form->course->name ?? '';
+
+                $branchName = $form->branch->name ?? '';
+
+                $schemeName = $form->scheme->name ?? '';
+
+                $semesterName = $form->semester->name ?? '';
+
+                $section = $form->batch->name ?? '';
+
+                $studentInstitute = $form->institute->name ?? '';
+
+                $examCenterName = $form->examCenter->name ?? '';
+
+                $examType = $form->exam_type ?? '';
+
+                $examFeeAmount = $form->total_exam_fee ?? 0;
+
+                /*
+                * Selected subjects from:
+                * examination_form_choosed_subjects
+                *
+                * Relationship:
+                * choosedSubjects()
+                *
+                * Nested relationship:
+                * choosedSubjects.subject
+                */
+
+                $chosenSubjects = $form->choosedSubjects;
+
+                /* ==================================================
+                ROW WISE EXPORT
+                ================================================== */
+
+                if ($request->form_type === 'row-wise') {
+
+                    foreach ($chosenSubjects as $chosenSubject) {
+
+                        $subject = $chosenSubject->subject;
+
+                        if (!$subject) {
+                            continue;
+                        }
+
+                        $row = [
+                            $sn++,
+                            $studentId,
+                            $courseName,
+                            $branchName,
+                            $schemeName,
+                            $semesterName,
+                            $section,
+                            $studentInstitute,
+                            $examCenterName,
+                            $examType,
+                            $examFeeAmount,
+                            $subject->subject_code ?? '',
+                            $subject->name ?? '',
+                            $subject->type ?? '',
+                        ];
+
+                        fputcsv($file, $row);
+                    }
+                }
+
+                /* ==================================================
+                COLUMN WISE EXPORT
+                ================================================== */
+
+                else {
+
+                    $subjectCodes = $chosenSubjects
+                        ->map(function ($chosenSubject) {
+
+                            return $chosenSubject->subject->subject_code
+                                ?? null;
+
+                        })
+                        ->filter()
+                        ->implode(', ');
+
+                    $row = [
+                        $sn++,
+                        $studentId,
+                        $courseName,
+                        $branchName,
+                        $schemeName,
+                        $semesterName,
+                        $section,
+                        $studentInstitute,
+                        $examCenterName,
+                        $form->form_id ?? '',
+                        $examType,
+                        $examFeeAmount,
+                        $subjectCodes,
+                        $form->last_appearning_session ?? '',
+                        $form->last_appearing_year ?? '',
+                    ];
+
+                    fputcsv($file, $row);
+                }
+            }
+
+            fclose($file);
+
+        }, $fileName, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Cache-Control' => 'no-store, no-cache',
+        ]);
+    }
+
 }
