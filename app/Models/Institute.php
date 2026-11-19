@@ -44,10 +44,10 @@ class Institute extends Authenticatable
         return $this->belongsTo(Institute::class, 'institute_id', 'id');
     }
 
-    public function assignedSubjects()
-    {
-        return $this->hasMany(TeacherSubject::class, 'teacher_id');
-    }
+    // public function assignedSubjects()
+    // {
+    //     return $this->hasMany(TeacherSubject::class, 'teacher_id');
+    // }
 
     public function subjects()
     {
@@ -59,5 +59,5 @@ class Institute extends Authenticatable
         )->withPivot('institute_id')
         ->withTimestamps();
     }
-    
+
 }

@@ -218,10 +218,14 @@
                     <td>{{ $form->examCenter->name ?? '-' }}</td>
 
                     <td class="no-export">
-                        <a href="{{ route('admin.examination-form.edit', $form->id) }}"
-                           class="btn btn-primary btn-sm btn-edit">
-                            <i class="fas fa-edit"></i> Edit
-                        </a>
+                        @if (strtolower($form->exam_type ?? '') === 'regular')
+                            <a href="{{ route('admin.examination-form.edit', $form->id) }}"
+                            class="btn btn-primary btn-sm btn-edit">
+                                <i class="fas fa-edit"></i> Edit
+                            </a>
+                        @else
+                            -
+                        @endif
                     </td>
                 </tr>
 
