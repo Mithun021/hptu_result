@@ -1,0 +1,4 @@
+﻿exam name,student university roll no,course_name,branch_name,scheme,semester,batch,student_institute,exam_center_name,exam_type,exam_fee_amount,late fee,total fee,last_appearning_session,last_appearing_year,concatenated_subject_codes
+Annual Examination 2026,HP-2023-001,B.Tech,Computer Science,2022 Scheme,1st Semester,2023-27,ABC College,University Examination Centre,Regular,1500,200,1700,2024-25,2025,"SUB-101,SUB-102,SUB-103"
+Annual Examination 2026,HP-2023-002,B.Tech,Computer Science,2022 Scheme,1st Semester,2023-27,ABC College,University Examination Centre,Reappear,1500,500,2000,2024-25,2025,"SUB-101,SUB-103"
+Annual Examination 2026,HP-2023-003,B.Tech,Mechanical Engineering,2022 Scheme,2nd Semester,2023-27,XYZ College,University Examination Centre,Regular,1500,0,1500,,,"ME-201,ME-202"

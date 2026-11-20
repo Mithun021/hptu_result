@@ -22,7 +22,7 @@
                         <i data-feather="plus-circle" style="width:14px; height:14px;" class="me-1"></i>
                         Create New
                     </a>
-                    
+
                     <button type="button" class="btn btn-sm btn-warning" data-bs-toggle="offcanvas" data-bs-target="#studentOffcanvasTop">
                         <i data-feather="filter" style="width:14px; height:14px;"></i>
                     </button>
@@ -40,12 +40,12 @@
                                         <label for="student_roll_number">Student Roll Number</label>
                                         <input type="text" name="student_roll_number" id="student_roll_number" class="form-control">
                                     </div>
-                                    <div class="col-md-2 form-group mb-2">
+                                    <div class="col-md-2 form-group mb-2 d-none">
                                         <label for="course_type">Course Type</label>
                                         <select name="course_type" id="course_type" class="form-control">
                                             <option value="">--Select--</option>
-                                            <option value="Annual Based">Annual Based</option>
-                                            <option value="Semester Based">Semester Based</option>
+                                            {{-- <option value="Annual Based">Annual Based</option> --}}
+                                            <option value="Semester Based" selected>Semester Based</option>
                                         </select>
                                     </div>
                                     <div class="col-md-2 form-group mb-2">
@@ -100,8 +100,8 @@
                             </form>
                         </div>
                     </div>
-                    
-                    
+
+
                 </div>
             </div>
             <div class="card-body">
@@ -154,7 +154,7 @@
                         <li><strong>Upload CSV files only.</strong> Other file formats are not supported.</li>
 
                         <li>
-                            <strong>Do not modify the column headers.</strong>  
+                            <strong>Do not modify the column headers.</strong>
                             The first row of the CSV file must exactly match the following order:
                             <br>
                             <code>
@@ -231,8 +231,8 @@
                         <div class="card mb-3">
                             <div class="card-body d-flex justify-content-between align-items-center">
                                 <h5 class="card-title mb-0">Download Sample CSV</h5>
-                                <a href="{{ asset('assets/sample/students.csv') }}" 
-                                class="btn btn-primary" 
+                                <a href="{{ asset('assets/sample/students.csv') }}"
+                                class="btn btn-primary"
                                 download="student_sample.csv">
                                     <i class="mdi mdi-download me-1"></i> Download
                                 </a>
@@ -262,7 +262,7 @@
 </div>
 
 
-<script src="{{ asset('assets/libs/jquery/jquery.min.js') }}"></script> 
+<script src="{{ asset('assets/libs/jquery/jquery.min.js') }}"></script>
 
 
 <script>

@@ -379,6 +379,8 @@ Route::middleware(['backend.auth'])->prefix('backend')->group(function () {
     Route::get('/examination-form/{id}/edit', [ManageExamFormController::class, 'edit']) ->name('admin.examination-form.edit');
     Route::get('download-exam-form', [ManageExamFormController::class, 'downloadExamForm']) ->name('admin.download-exam-form');
     Route::get('download-exam-form-sheet', [ManageExamFormController::class, 'downloadExamFormSheet'])->name('admin.download-exam-form-sheet');
+    Route::get('/examination-form/upload-exam-from',[ManageExamFormController::class, 'uploadExamForm'])->name('admin.examination-form.upload');
+    Route::post('/examination-form/upload-exam-from',[ManageExamFormController::class, 'importExamForm'])->name('admin.examination-form.import');
 
     Route::get('cutlist', [CutlistController::class, 'index']) ->name('admin.cutlist.index');
     Route::get('attendance-sheet', [AttendanceSheetController::class, 'index']) ->name('admin.attendance-sheet.index');

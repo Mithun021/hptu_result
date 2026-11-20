@@ -1,3 +1,4 @@
+
 @extends('backend.partial.master')
 @section('title', 'Attendance Report')
 @section('sub_title', 'Attendance Report')
@@ -100,16 +101,18 @@
         margin: 0 auto;
     }
 
+    /* Subject Grid */
     .subject-grid {
-        width: 100%;
+        width: auto;
         border-collapse: collapse;
-        table-layout: fixed;
+        table-layout: auto;
     }
 
     .subject-grid td {
-        border: 1px solid #000;
+        border: 0;
         padding: 0;
         vertical-align: top;
+        width: 80px;
     }
 
     .subject-item {
@@ -156,37 +159,34 @@
         color: #fff;
     }
 
-    .college-name{
+    .college-name {
         font-size: 8px !important;
     }
 
+    /* =========================================
+       PRINT SETTINGS - A4 LANDSCAPE
+    ========================================= */
     @media print {
+
         @page {
             size: A4 landscape;
-            margin: 8mm;
+            margin: 6mm;
         }
 
-        html, body {
+        html,
+        body {
             width: 100% !important;
-            height: auto !important;
             margin: 0 !important;
             padding: 0 !important;
             background: #fff !important;
         }
 
-        body * {
-            visibility: hidden !important;
-        }
-
-        #attendanceReport,
-        #attendanceReport * {
-            visibility: visible !important;
+        .no-print {
+            display: none !important;
         }
 
         #attendanceReport {
-            position: absolute !important;
-            top: 0 !important;
-            left: 0 !important;
+            position: static !important;
             width: 100% !important;
             max-width: 100% !important;
             margin: 0 !important;
@@ -196,8 +196,23 @@
             box-shadow: none !important;
         }
 
-        .no-print {
-            display: none !important;
+        .report-heading {
+            margin-bottom: 5px !important;
+        }
+
+        .report-heading h4 {
+            font-size: 12px !important;
+        }
+
+        .report-info {
+            margin-bottom: 5px !important;
+            font-size: 8px !important;
+            line-height: 1.2 !important;
+        }
+
+        .report-info span {
+            margin-right: 10px !important;
+            margin-bottom: 2px !important;
         }
 
         .report-table-wrapper {
@@ -207,50 +222,97 @@
 
         .report-table {
             width: 100% !important;
-            font-size: 9px !important;
+            font-size: 8px !important;
             border-collapse: collapse !important;
         }
 
         .report-table th,
-        .report-table td,
-        .subject-grid td,
-        .subject-item th,
-        .subject-item td {
+        .report-table td {
             border: 1px solid #000 !important;
-            padding: 3px 2px !important;
+            padding: 2px 1px !important;
             color: #000 !important;
         }
 
-        .report-table th,
-        .subject-item th {
+        .report-table th {
+            font-size: 8px !important;
+            line-height: 1.1 !important;
             background: #f2f2f2 !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
         }
 
-        .subject-grid,
+        /* Subject outer grid */
+        .subject-grid {
+            width: auto !important;
+            border-collapse: collapse !important;
+            table-layout: auto !important;
+        }
+
+        .subject-grid td {
+            width: 80px !important;
+            border: 0 !important;
+            padding: 0 !important;
+        }
+
+        /* Individual subject boxes */
         .subject-item {
             width: 100% !important;
             border-collapse: collapse !important;
             table-layout: fixed !important;
         }
 
-        .student-photo {
-            width: 48px !important;
-            height: 52px !important;
+        .subject-item th {
+            background: #f2f2f2 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
         }
 
+        .subject-item th,
+        .subject-item td {
+            border: 1px solid #000 !important;
+            height: 14px !important;
+            padding: 1px !important;
+            font-size: 7px !important;
+            line-height: 1 !important;
+            color: #000 !important;
+        }
+
+        /* Student photo */
+        .student-photo {
+            width: 38px !important;
+            height: 40px !important;
+            margin: 0 auto 2px !important;
+        }
+
+        /* Student signature */
         .student-signature {
-            width: 48px !important;
-            height: 23px !important;
+            width: 38px !important;
+            height: 17px !important;
+            margin: 0 auto !important;
+        }
+
+        /* Subject code */
+        .subject-code {
+            height: 18px !important;
+            font-size: 7px !important;
+            line-height: 1 !important;
+            padding: 1px !important;
+        }
+
+        /* Blank rows */
+        .subject-empty {
+            height: 14px !important;
+        }
+
+        /* College name */
+        .college-name {
+            font-size: 7px !important;
+            line-height: 1.1 !important;
         }
 
         .report-table tr {
             page-break-inside: avoid !important;
             break-inside: avoid !important;
-        }
-        .college-name{
-            font-size: 8px !important;
         }
     }
 </style>
@@ -262,7 +324,7 @@
 
         <button type="button"
                 class="report-print-btn no-print"
-                onclick="window.print()">
+                onclick="printAttendanceReport()">
             <i class="fa fa-print"></i> Print
         </button>
     </div>
@@ -379,5 +441,291 @@
     </div>
 
 </div>
+
+
+{{-- =========================================
+     CUSTOM PRINT JAVASCRIPT
+========================================= --}}
+<script>
+    function printAttendanceReport() {
+
+        const report = document.getElementById('attendanceReport');
+
+        if (!report) {
+            alert('Attendance report not found!');
+            return;
+        }
+
+        // Open separate print window
+        const printWindow = window.open(
+            '',
+            '_blank',
+            'width=1200,height=850'
+        );
+
+        if (!printWindow) {
+            alert('Please allow pop-ups for printing this report.');
+            return;
+        }
+
+        // Copy page stylesheets
+        const stylesheets = Array.from(
+            document.querySelectorAll('link[rel="stylesheet"]')
+        ).map(link => link.outerHTML).join('\n');
+
+        // Copy inline styles
+        const inlineStyles = Array.from(
+            document.querySelectorAll('style')
+        ).map(style => style.outerHTML).join('\n');
+
+        // Clone report content
+        const reportClone = report.cloneNode(true);
+
+        // Remove print button from cloned report
+        const printButton = reportClone.querySelector('.no-print');
+
+        if (printButton) {
+            printButton.remove();
+        }
+
+        // Write print document
+        printWindow.document.open();
+
+        printWindow.document.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Attendance Report</title>
+
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+                ${stylesheets}
+                ${inlineStyles}
+
+                <style>
+                    @page {
+                        size: A4 landscape;
+                        margin: 6mm;
+                    }
+
+                    html, body {
+                        width: 100%;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        background: #fff !important;
+                    }
+
+                    body {
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                    }
+
+                    #attendanceReport {
+                        position: static !important;
+                        width: 100% !important;
+                        max-width: 100% !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        border: 0 !important;
+                        background: #fff !important;
+                        box-shadow: none !important;
+                    }
+
+                    .report-table-wrapper {
+                        width: 100% !important;
+                        overflow: visible !important;
+                    }
+
+                    .report-table {
+                        width: 100% !important;
+                        border-collapse: collapse !important;
+                        font-size: 8px !important;
+                    }
+
+                    .report-table th,
+                    .report-table td {
+                        border: 1px solid #000 !important;
+                        padding: 2px 1px !important;
+                        color: #000 !important;
+                    }
+
+                    .report-table th {
+                        font-size: 8px !important;
+                        line-height: 1.1 !important;
+                        background: #f2f2f2 !important;
+                    }
+
+                    /* Remove only outer subject grid border */
+                    .subject-grid {
+                        width: auto !important;
+                        border-collapse: collapse !important;
+                        table-layout: auto !important;
+                    }
+
+                    .subject-grid td {
+                        width: 80px !important;
+                        border: 0 !important;
+                        padding: 0 !important;
+                    }
+
+                    /* Keep individual subject boxes */
+                    .subject-item {
+                        width: 100% !important;
+                        border-collapse: collapse !important;
+                        table-layout: fixed !important;
+                    }
+
+                    .subject-item th,
+                    .subject-item td {
+                        border: 1px solid #000 !important;
+                        height: 14px !important;
+                        padding: 1px !important;
+                        font-size: 7px !important;
+                        line-height: 1 !important;
+                    }
+
+                    .subject-item th {
+                        background: #f2f2f2 !important;
+                    }
+
+                    .subject-code {
+                        height: 18px !important;
+                        font-size: 7px !important;
+                        padding: 1px !important;
+                    }
+
+                    .subject-empty {
+                        height: 14px !important;
+                    }
+
+                    .student-photo {
+                        width: 38px !important;
+                        height: 40px !important;
+                        margin: 0 auto 2px !important;
+                        object-fit: cover !important;
+                    }
+
+                    .student-signature {
+                        width: 38px !important;
+                        height: 17px !important;
+                        margin: 0 auto !important;
+                        object-fit: contain !important;
+                    }
+
+                    .college-name {
+                        font-size: 7px !important;
+                    }
+
+                    .report-heading {
+                        margin-bottom: 5px !important;
+                    }
+
+                    .report-heading h4 {
+                        font-size: 12px !important;
+                    }
+
+                    .report-info {
+                        margin-bottom: 5px !important;
+                        font-size: 8px !important;
+                    }
+
+                    .report-info span {
+                        margin-right: 10px !important;
+                        margin-bottom: 2px !important;
+                    }
+
+                    .report-table tr {
+                        page-break-inside: avoid !important;
+                        break-inside: avoid !important;
+                    }
+
+                    img {
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                    }
+                </style>
+
+            </head>
+
+            <body>
+                ${reportClone.outerHTML}
+            </body>
+            </html>
+        `);
+
+        printWindow.document.close();
+
+        // Wait for all images and styles to load
+        const waitForImages = () => {
+
+            const images = Array.from(
+                printWindow.document.images
+            );
+
+            return Promise.all(
+                images.map(img => {
+
+                    if (img.complete) {
+                        return Promise.resolve();
+                    }
+
+                    return new Promise(resolve => {
+
+                        img.onload = resolve;
+                        img.onerror = resolve;
+
+                    });
+                })
+            );
+        };
+
+        // Print after document and images are ready
+        const startPrinting = async () => {
+
+            try {
+
+                await waitForImages();
+
+                if (printWindow.document.fonts) {
+                    await printWindow.document.fonts.ready;
+                }
+
+                // Small delay for final layout calculation
+                setTimeout(() => {
+
+                    printWindow.focus();
+
+                    printWindow.print();
+
+                    // Close after print dialog is completed
+                    printWindow.onafterprint = function () {
+                        printWindow.close();
+                    };
+
+                }, 500);
+
+            } catch (error) {
+
+                console.error('Print error:', error);
+
+                printWindow.focus();
+                printWindow.print();
+
+            }
+        };
+
+        // Wait until print document is ready
+        if (printWindow.document.readyState === 'complete') {
+
+            startPrinting();
+
+        } else {
+
+            printWindow.onload = startPrinting;
+
+        }
+    }
+</script>
 
 @endsection

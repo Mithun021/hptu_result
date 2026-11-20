@@ -2,14 +2,20 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Batch;
+use App\Models\Branch;
 use App\Models\Course;
 use App\Models\Exam;
 use App\Models\ExaminationForm;
 use App\Models\Institute;
+use App\Models\Scheme;
+use App\Models\Semester;
 use App\Models\Student;
 use App\Models\StudentSubject;
+use App\Models\Subject;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 
 class ManageExamFormController extends Controller
@@ -576,6 +582,564 @@ class ManageExamFormController extends Controller
             'Content-Type' => 'text/csv; charset=UTF-8',
             'Cache-Control' => 'no-store, no-cache',
         ]);
+    }
+
+    public function uploadExamForm()
+    {
+        return view('backend.examination-form.upload-exam-from');
+    }
+
+    public function importExamForm(Request $request)
+    {
+        $request->validate([
+            'csv_file' => 'required|file|mimes:csv,txt|max:20480',
+        ]);
+
+        $file = $request->file('csv_file');
+        $handle = fopen($file->getRealPath(), 'r');
+
+        if (!$handle) {
+            return back()->with('error', 'Unable to read CSV file.');
+        }
+
+        $successCount = 0;
+        $errorRows = [];
+        $rowNumber = 1;
+
+        try {
+
+            /*
+            |--------------------------------------------------------------------------
+            | READ AND NORMALIZE CSV HEADERS
+            |--------------------------------------------------------------------------
+            */
+
+            $headers = fgetcsv($handle);
+
+            if (!$headers) {
+                fclose($handle);
+
+                return back()->with('error', 'CSV file is empty.');
+            }
+
+            $headers = array_map(function ($header) {
+
+                $header = preg_replace('/^\xEF\xBB\xBF/', '', $header);
+
+                return strtolower(
+                    preg_replace('/[^a-z0-9]/', '', trim($header))
+                );
+
+            }, $headers);
+
+            $requiredHeaders = [
+                'examname',
+                'studentuniversityrollno',
+                'coursename',
+                'branchname',
+                'scheme',
+                'semester',
+                'batch',
+                'studentinstitute',
+                'examcentername',
+                'examtype',
+                'examfeeamount',
+                'latefee',
+                'totalfee',
+                'lastappearningsession',
+                'lastappearingyear',
+                'concatenatedsubjectcodes',
+            ];
+
+            $missingHeaders = array_diff($requiredHeaders, $headers);
+
+            if (!empty($missingHeaders)) {
+
+                fclose($handle);
+
+                return back()->with(
+                    'error',
+                    'Missing CSV columns: ' . implode(', ', $missingHeaders)
+                );
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | PROCESS CSV ROWS
+            |--------------------------------------------------------------------------
+            */
+
+            while (($row = fgetcsv($handle)) !== false) {
+
+                $rowNumber++;
+
+                // Skip empty rows
+                if (count(array_filter($row, function ($value) {
+                    return trim((string) $value) !== '';
+                })) === 0) {
+                    continue;
+                }
+
+                if (count($row) !== count($headers)) {
+
+                    $errorRows[] = "Row {$rowNumber}: Invalid number of columns.";
+
+                    continue;
+                }
+
+                $data = array_combine($headers, $row);
+
+                $data = array_map(function ($value) {
+                    return trim((string) $value);
+                }, $data);
+
+                try {
+
+                    DB::transaction(function () use ($data) {
+
+                        /*
+                        |--------------------------------------------------------------------------
+                        | 1. FIND EXAM
+                        |--------------------------------------------------------------------------
+                        */
+
+                        $exam = Exam::where('name', $data['examname'])
+                            ->first();
+
+                        if (!$exam) {
+                            throw new \Exception(
+                                "Exam not found: {$data['examname']}"
+                            );
+                        }
+
+                        /*
+                        |--------------------------------------------------------------------------
+                        | 2. FIND STUDENT USING UNIVERSITY ROLL NUMBER
+                        |--------------------------------------------------------------------------
+                        */
+
+                        $student = Student::where(
+                            'university_roll_no',
+                            $data['studentuniversityrollno']
+                        )->first();
+
+                        if (!$student) {
+                            throw new \Exception(
+                                "Student not found with University Roll No: " .
+                                $data['studentuniversityrollno']
+                            );
+                        }
+
+                        /*
+                        |--------------------------------------------------------------------------
+                        | 3. FIND COURSE
+                        |--------------------------------------------------------------------------
+                        */
+
+                        $course = Course::where('name', $data['coursename'])
+                            ->first();
+
+                        if (!$course) {
+                            throw new \Exception(
+                                "Course not found: {$data['coursename']}"
+                            );
+                        }
+
+                        /*
+                        |--------------------------------------------------------------------------
+                        | 4. FIND BRANCH
+                        |--------------------------------------------------------------------------
+                        */
+
+                        $branch = Branch::where('course_id', $course->id)
+                            ->where('name', $data['branchname'])
+                            ->first();
+
+                        if (!$branch) {
+                            throw new \Exception(
+                                "Branch not found: {$data['branchname']}"
+                            );
+                        }
+
+                        /*
+                        |--------------------------------------------------------------------------
+                        | 5. FIND SCHEME
+                        |--------------------------------------------------------------------------
+                        */
+
+                        $scheme = Scheme::where('name', $data['scheme'])
+                            ->first();
+
+                        if (!$scheme) {
+                            throw new \Exception(
+                                "Scheme not found: {$data['scheme']}"
+                            );
+                        }
+
+                        /*
+                        |--------------------------------------------------------------------------
+                        | 6. FIND SEMESTER / ANNUAL SEMESTER
+                        |--------------------------------------------------------------------------
+                        */
+
+                        if ($course->course_type === 'Annual Based') {
+
+                            $annualSemester = DB::table('annual_semesters')
+                                ->where('name', $data['semester'])
+                                ->first();
+
+                            if (!$annualSemester) {
+                                throw new \Exception(
+                                    "Annual semester not found: {$data['semester']}"
+                                );
+                            }
+
+                            $semesterId = $annualSemester->id;
+
+                        } else {
+
+                            $semester = Semester::where(
+                                'name',
+                                $data['semester']
+                            )->first();
+
+                            if (!$semester) {
+                                throw new \Exception(
+                                    "Semester not found: {$data['semester']}"
+                                );
+                            }
+
+                            $semesterId = $semester->id;
+                        }
+
+                        /*
+                        |--------------------------------------------------------------------------
+                        | 7. FIND BATCH
+                        |--------------------------------------------------------------------------
+                        */
+
+                        $batch = Batch::where('name', $data['batch'])
+                            ->first();
+
+                        if (!$batch) {
+                            throw new \Exception(
+                                "Batch not found: {$data['batch']}"
+                            );
+                        }
+
+                        /*
+                        |--------------------------------------------------------------------------
+                        | 8. FIND STUDENT INSTITUTE
+                        |--------------------------------------------------------------------------
+                        */
+
+                        $institute = Institute::where(
+                            'name',
+                            $data['studentinstitute']
+                        )->first();
+
+                        if (!$institute) {
+                            throw new \Exception(
+                                "Student institute not found: {$data['studentinstitute']}"
+                            );
+                        }
+
+                        /*
+                        |--------------------------------------------------------------------------
+                        | 9. FIND EXAM CENTER
+                        |--------------------------------------------------------------------------
+                        */
+
+                        $examCenter = Institute::where(
+                            'name',
+                            $data['examcentername']
+                        )->first();
+
+                        if (!$examCenter) {
+                            throw new \Exception(
+                                "Exam center not found: {$data['examcentername']}"
+                            );
+                        }
+
+                        /*
+                        |--------------------------------------------------------------------------
+                        | 10. FIND SUBJECTS
+                        |--------------------------------------------------------------------------
+                        */
+
+                        $subjectCodes = array_filter(
+                            array_map(
+                                'trim',
+                                explode(',', $data['concatenatedsubjectcodes'])
+                            )
+                        );
+
+                        if (empty($subjectCodes)) {
+                            throw new \Exception(
+                                'No subject codes provided.'
+                            );
+                        }
+
+                        $subjectIds = [];
+
+                        foreach ($subjectCodes as $subjectCode) {
+
+                            $subjectQuery = Subject::where(
+                                'course_id',
+                                $course->id
+                            )
+                                ->where('branch_id', $branch->id)
+                                ->where('scheme_id', $scheme->id)
+                                ->where('subject_code', $subjectCode);
+
+                            if ($course->course_type === 'Annual Based') {
+
+                                $subjectQuery->where(
+                                    'annual_semester_id',
+                                    $semesterId
+                                );
+
+                            } else {
+
+                                $subjectQuery->where(
+                                    'semester_id',
+                                    $semesterId
+                                );
+                            }
+
+                            $subject = $subjectQuery->first();
+
+                            if (!$subject) {
+                                throw new \Exception(
+                                    "Subject not found: {$subjectCode}"
+                                );
+                            }
+
+                            $subjectIds[] = $subject->id;
+                        }
+
+                        $subjectIds = array_unique($subjectIds);
+
+                        /*
+                        |--------------------------------------------------------------------------
+                        | 11. VALIDATE FEES AND EXAM TYPE
+                        |--------------------------------------------------------------------------
+                        */
+
+                        $validator = Validator::make($data, [
+                            'examtype' => 'required|in:Regular,Reappear,Special Chance',
+                            'examfeeamount' => 'required|numeric|min:0',
+                            'latefee' => 'required|numeric|min:0',
+                            'totalfee' => 'required|numeric|min:0',
+                        ]);
+
+                        if ($validator->fails()) {
+                            throw new \Exception(
+                                implode(', ', $validator->errors()->all())
+                            );
+                        }
+
+                        /*
+                        |--------------------------------------------------------------------------
+                        | 12. FIND EXISTING EXAMINATION FORM
+                        |--------------------------------------------------------------------------
+                        */
+
+                        $existingForm = ExaminationForm::where(
+                            'exam_id',
+                            $exam->id
+                        )
+                            ->where('student_id', $student->id)
+                            ->where('semester_id', $semesterId)
+                            ->where('exam_type', $data['examtype'])
+                            ->lockForUpdate()
+                            ->first();
+
+                        /*
+                        |--------------------------------------------------------------------------
+                        | 13. GENERATE FORM ID AND TRANSACTION ID
+                        |--------------------------------------------------------------------------
+                        */
+
+                        if ($existingForm) {
+
+                            // Preserve existing IDs
+                            $formId = $existingForm->form_id;
+                            $transactionId = $existingForm->transaction_id;
+
+                        } else {
+
+                            // Lock exam row before generating serial
+                            $lockedExam = Exam::where('id', $exam->id)
+                                ->lockForUpdate()
+                                ->first();
+
+                            $examMonth = (string) $lockedExam->exam_month;
+                            $examYear  = (string) $lockedExam->exam_year;
+
+                            $prefix = $examMonth . $examYear;
+
+                            // Last four digits of university roll number
+                            $rollNumber = (string) $student->university_roll_no;
+
+                            $lastFourDigits = substr($rollNumber, -4);
+
+                            $existingForms = ExaminationForm::where(
+                                'exam_id',
+                                $exam->id
+                            )
+                                ->where('form_id', 'like', $prefix . '%')
+                                ->lockForUpdate()
+                                ->get(['form_id']);
+
+                            $lastSerial = 0;
+
+                            foreach ($existingForms as $existing) {
+
+                                $existingId = (string) $existing->form_id;
+
+                                $serialPart = substr(
+                                    $existingId,
+                                    strlen($prefix),
+                                    -4
+                                );
+
+                                if (ctype_digit($serialPart)) {
+                                    $lastSerial = max(
+                                        $lastSerial,
+                                        (int) $serialPart
+                                    );
+                                }
+                            }
+
+                            $nextSerial = $lastSerial + 1;
+
+                            $serial = str_pad(
+                                (string) $nextSerial,
+                                5,
+                                '0',
+                                STR_PAD_LEFT
+                            );
+
+                            $formId = $prefix . $serial . $lastFourDigits;
+
+                            $transactionId = 'HPTUEXAM' .
+                                $prefix .
+                                $serial .
+                                $lastFourDigits;
+                        }
+
+                        /*
+                        |--------------------------------------------------------------------------
+                        | 14. SAVE EXAMINATION FORM
+                        |--------------------------------------------------------------------------
+                        */
+
+                        $formData = [
+
+                            'exam_id' => $exam->id,
+
+                            'exam_type' => $data['examtype'],
+
+                            'student_id' => $student->id,
+
+                            'course_id' => $course->id,
+
+                            'scheme_id' => $scheme->id,
+
+                            'branch_id' => $branch->id,
+
+                            'semester_id' => $semesterId,
+
+                            'batch_id' => $batch->id,
+
+                            'institute_id' => $institute->id,
+
+                            'exam_center_id' => $examCenter->id,
+
+                            'exam_fee' => $data['examfeeamount'],
+
+                            'late_fee' => $data['latefee'],
+
+                            'total_exam_fee' => $data['totalfee'],
+
+                            'last_appearning_session' =>
+                                $data['lastappearningsession'] ?: null,
+
+                            'last_appearing_year' =>
+                                $data['lastappearingyear'] ?: null,
+
+                            'form_id' => $formId,
+
+                            'transaction_id' => $transactionId,
+                        ];
+
+                        if ($existingForm) {
+
+                            $existingForm->update($formData);
+
+                            $form = $existingForm;
+
+                        } else {
+
+                            $formData['transaction_date'] = null;
+                            $formData['payment_status'] = 1;
+
+                            $form = ExaminationForm::create($formData);
+                        }
+
+                        /*
+                        |--------------------------------------------------------------------------
+                        | 15. UPDATE SELECTED SUBJECTS
+                        |--------------------------------------------------------------------------
+                        */
+
+                        $form->choosedSubjects()->delete();
+
+                        $subjectData = [];
+
+                        foreach ($subjectIds as $subjectId) {
+
+                            $subjectData[] = [
+                                'subject_id' => $subjectId,
+                            ];
+                        }
+
+                        $form->choosedSubjects()->createMany($subjectData);
+
+                    }, 5);
+
+                    $successCount++;
+
+                } catch (\Throwable $e) {
+
+                    $errorRows[] = "Row {$rowNumber}: " . $e->getMessage();
+                }
+            }
+
+            fclose($handle);
+
+            return redirect()
+                ->route('admin.examination-form.upload')
+                ->with(
+                    'success',
+                    "{$successCount} examination form(s) imported/updated successfully."
+                )
+                ->with('import_errors', $errorRows);
+
+        } catch (\Throwable $e) {
+
+            if (is_resource($handle)) {
+                fclose($handle);
+            }
+
+            report($e);
+
+            return back()->with(
+                'error',
+                'CSV import failed: ' . $e->getMessage()
+            );
+        }
     }
 
 }

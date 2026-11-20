@@ -51,12 +51,36 @@
 
         let printArea = document.getElementById('exam-form-print-area');
 
-        if (!printArea || !printArea.querySelector('tbody tr')) {
+        if (!printArea) {
+            alert('Examination form table not found.');
+            return;
+        }
+
+        let rows = printArea.querySelectorAll('tbody tr');
+
+        // Check actual data rows
+        let hasData = false;
+
+        rows.forEach(function (row) {
+
+            if (
+                row.querySelectorAll('td').length > 1 &&
+                !row.innerText.includes('No paid examination forms found')
+            ) {
+                hasData = true;
+            }
+
+        });
+
+        if (!hasData) {
             alert('Please load examination forms first.');
             return;
         }
 
-        window.print();
+        // Wait until browser finishes rendering
+        setTimeout(function () {
+            window.print();
+        }, 300);
 
     });
 

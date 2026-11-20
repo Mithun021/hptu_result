@@ -1,5 +1,9 @@
 
 <style>
+    /* =========================================================
+    SCREEN CSS
+    ========================================================= */
+
     .exam-form-table {
         width: 100%;
         font-size: 11px;
@@ -47,112 +51,164 @@
         background-color: #f8f9fa;
     }
 
-    /* Print Header/Footer - Hidden on screen */
-    .print-header,
-    .print-footer {
-        display: none;
-    }
+
+    /* =========================================================
+    PRINT CSS
+    ========================================================= */
 
     @media print {
 
+        /* A4 Landscape */
         @page {
-            size: A4 portrait;
-            margin: 20mm 10mm 18mm 10mm;
+            size: A4 landscape;
+            margin: 8mm 6mm 8mm 6mm;
         }
 
+        html,
+        body {
+            width: 100% !important;
+            height: auto !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #fff !important;
+        }
+
+        /* Hide everything */
         body * {
             visibility: hidden !important;
         }
 
+        /* Show only examination form table */
         #exam-form-print-area,
         #exam-form-print-area * {
             visibility: visible !important;
         }
 
+        /*
+        IMPORTANT:
+        Do not use absolute/fixed positioning here.
+        Static positioning allows the table to flow across pages.
+        */
+
         #exam-form-print-area {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            padding: 0;
-            margin: 0;
-            border: none;
+            display: block !important;
+            position: static !important;
+            width: 100% !important;
+            height: auto !important;
+            max-height: none !important;
+            overflow: visible !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: none !important;
+            background: #fff !important;
         }
 
-        /* Hide no-export elements */
+        /* Hide action buttons and other unwanted columns */
         #exam-form-print-area .no-export {
             display: none !important;
         }
 
-        /* Remove responsive scrolling */
-        #exam-form-print-area.table-responsive {
+        /* Remove responsive table scrolling */
+        .table-responsive {
+            display: block !important;
+            width: 100% !important;
+            height: auto !important;
             overflow: visible !important;
         }
 
+        /* Table layout */
         .exam-form-table {
+            display: table !important;
             width: 100% !important;
+            table-layout: auto !important;
             border-collapse: collapse !important;
-            font-size: 9px !important;
+            border-spacing: 0 !important;
+            font-size: 7px !important;
             white-space: normal !important;
-        }
-
-        .exam-form-table th,
-        .exam-form-table td {
-            font-size: 9px !important;
-            padding: 5px 4px !important;
-            border: 1px solid #333 !important;
-            color: #000 !important;
+            margin: 0 !important;
             background: #fff !important;
         }
 
+        /* Repeat table heading on every page */
         .exam-form-table thead {
-            display: table-header-group;
+            display: table-header-group !important;
+        }
+
+        .exam-form-table tbody {
+            display: table-row-group !important;
         }
 
         .exam-form-table tfoot {
-            display: table-footer-group;
+            display: table-footer-group !important;
         }
 
+        /* Table heading and cells */
+        .exam-form-table th,
+        .exam-form-table td {
+            font-size: 7px !important;
+            line-height: 1.2 !important;
+            padding: 3px 3px !important;
+            border: 1px solid #333 !important;
+            color: #000 !important;
+            background: #fff !important;
+            vertical-align: middle !important;
+            white-space: normal !important;
+            overflow-wrap: break-word !important;
+            word-wrap: break-word !important;
+        }
+
+        .exam-form-table th {
+            font-weight: bold !important;
+            text-transform: uppercase;
+            background: #e9ecef !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        /* Keep each record together when possible */
         .exam-form-table tr {
-            page-break-inside: avoid;
-            break-inside: avoid;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+        }
+
+        .exam-form-table .student-name {
+            font-size: 7px !important;
+            font-weight: bold !important;
+            color: #000 !important;
         }
 
         .exam-form-table .father-name {
+            display: block !important;
+            font-size: 6px !important;
             color: #333 !important;
+            margin-top: 1px !important;
         }
 
-        /* Repeating header */
-        .print-header {
-            display: block !important;
-            position: fixed;
-            top: -15mm;
-            left: 0;
-            right: 0;
-            text-align: center;
-            font-size: 12px;
-            font-weight: bold;
-            padding-bottom: 5px;
-            border-bottom: 1px solid #333;
-        }
-
-        /* Repeating footer */
-        .print-footer {
-            display: block !important;
-            position: fixed;
-            bottom: -13mm;
-            left: 0;
-            right: 0;
-            text-align: center;
-            font-size: 9px;
-            padding-top: 5px;
-            border-top: 1px solid #333;
-        }
-
-        a {
+        /* Remove links styling */
+        #exam-form-print-area a {
             color: #000 !important;
             text-decoration: none !important;
         }
+
+        /* Hide unnecessary elements */
+        .print-header,
+        .print-footer,
+        .no-print,
+        .card-header,
+        .card-tools,
+        .export-button {
+            display: none !important;
+        }
+
+        /* Prevent unwanted backgrounds */
+        body,
+        #exam-form-print-area,
+        .exam-form-table,
+        .exam-form-table tr,
+        .exam-form-table td {
+            background-color: #fff !important;
+        }
+
     }
 </style>
 

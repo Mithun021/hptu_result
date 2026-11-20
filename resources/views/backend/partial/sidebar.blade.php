@@ -48,6 +48,7 @@
                             <li><a href="{{ route('mid-sem-exams.index') }}" class="tp-link">Mid-Sem/Internal Exam Name</a></li>
                             <li><a href="{{ route('exam-fees.index') }}" class="tp-link">Exam Fees</a></li>
                             <li><a href="{{ route('exam-centers.index') }}" class="tp-link">Exam Centers</a></li>
+                            <li><a href="{{ route('admin.examination-form.upload') }}" class="tp-link">Upload Exam Form</a></li>
                             <li><a href="{{ route('block-students.index') }}" class="tp-link">Blocked Students</a></li>
                             <li><a href="{{ route('pass-percentages.index') }}" class="tp-link">Pass Percentage</a></li>
                             <li><a href="{{ route('marks-grades.index') }}" class="tp-link">Marks Grade</a></li>

@@ -29,12 +29,12 @@
                         </div>
                         <div class="offcanvas-body card">
                             <div class="row">
-                                <div class="col-md-2 form-group mb-2">
+                                <div class="col-md-2 form-group mb-2 d-none">
                                     <label for="course_type">Course Type<span class="text-danger">*</span></label>
                                     <select name="course_type" id="course_type" class="form-control">
                                         <option value="">--Select--</option>
-                                        <option value="Annual Based">Annual Based</option>
-                                        <option value="Semester Based">Semester Based</option>
+                                        {{-- <option value="Annual Based">Annual Based</option> --}}
+                                        <option value="Semester Based" selected>Semester Based</option>
                                     </select>
                                     @error('course_type') <small class="text-danger">{{ $message }}</small> @enderror
                                 </div>
