@@ -13,11 +13,12 @@ return new class extends Migration
     {
         Schema::create('marks_grades', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('course_id');         
-            $table->string('grade_name', 20);                  
-            $table->decimal('percent_from', 5, 2);                
-            $table->decimal('percent_upto', 5, 2);                
-            $table->decimal('grade_point', 4, 2)->nullable();                  
+            $table->unsignedBigInteger('course_id');
+            $table->unsignedBigInteger('scheme_id');
+            $table->string('grade_name', 20);
+            $table->decimal('percent_from', 5, 2);
+            $table->decimal('percent_upto', 5, 2);
+            $table->decimal('grade_point', 4, 2)->nullable();
             $table->string('grade_description', 20)->nullable();
             $table->timestamps();
             $table->foreign('course_id')
@@ -25,9 +26,17 @@ return new class extends Migration
                 ->on('courses')
                 ->onDelete('cascade');
 
+            $table->foreign('scheme_id')
+                ->references('id')
+                ->on('schemes')
+                ->onDelete('cascade');
+
             // Optional: ek course me same range duplicate na ho
-            $table->unique(['course_id', 'percent_from', 'percent_upto']);
-            
+            $table->unique(
+                ['course_id', 'scheme_id', 'percent_from', 'percent_upto'],
+                'mg_course_scheme_range_unique'
+            );
+
         });
     }
 

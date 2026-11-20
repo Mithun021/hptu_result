@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\PassPercentage;
 use App\Models\Course;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class PassPercentageController extends Controller
 {
@@ -14,7 +15,11 @@ class PassPercentageController extends Controller
     public function index()
     {
         return view('backend.pass-percentages.index', [
-            'passPercentages' => PassPercentage::with('course:id,name')->latest()->get(),
+            'passPercentages' => PassPercentage::with([
+                'course:id,name',
+                'scheme:id,name',
+            ])->latest()->get(),
+
             'courses' => Course::select('id', 'name')->get(),
         ]);
     }
@@ -25,9 +30,23 @@ class PassPercentageController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'course_id'       => 'required|exists:courses,id|unique:pass_percentages,course_id',
+            'course_id' => [
+                'required',
+                'exists:courses,id',
+            ],
+
+            'scheme_id' => [
+                'required',
+                'exists:schemes,id',
+                Rule::unique('pass_percentages')
+                    ->where(function ($query) use ($request) {
+                        return $query->where('course_id', $request->course_id);
+                    }),
+            ],
+
             'overall_pass_percentage' => 'required|numeric|min:0|max:100',
-            'theory_min_percentage' => 'required|numeric|min:0|max:100',
+
+            'percentage_type' => 'required|in:separate,aggregate',
         ]);
 
         PassPercentage::create($validated);
@@ -46,6 +65,7 @@ class PassPercentageController extends Controller
 
         return view('backend.pass-percentages.edit', [
             'passPercentage' => $passPercentage,
+
             'courses' => Course::select('id', 'name')->get(),
         ]);
     }
@@ -58,9 +78,24 @@ class PassPercentageController extends Controller
         $passPercentage = PassPercentage::findOrFail($id);
 
         $validated = $request->validate([
-            'course_id'       => 'required|exists:courses,id|unique:pass_percentages,course_id,' . $passPercentage->id,
-            'pass_percentage' => 'required|numeric|min:0|max:100',
-            'theory_min_percentage' => 'required|numeric|min:0|max:100',
+            'course_id' => [
+                'required',
+                'exists:courses,id',
+            ],
+
+            'scheme_id' => [
+                'required',
+                'exists:schemes,id',
+                Rule::unique('pass_percentages')
+                    ->where(function ($query) use ($request) {
+                        return $query->where('course_id', $request->course_id);
+                    })
+                    ->ignore($passPercentage->id),
+            ],
+
+            'overall_pass_percentage' => 'required|numeric|min:0|max:100',
+
+            'percentage_type' => 'required|in:separate,aggregate',
         ]);
 
         $passPercentage->update($validated);
@@ -76,6 +111,7 @@ class PassPercentageController extends Controller
     public function destroy(string $id)
     {
         $passPercentage = PassPercentage::findOrFail($id);
+
         $passPercentage->delete();
 
         return redirect()

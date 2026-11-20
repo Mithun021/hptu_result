@@ -13,8 +13,9 @@ class PassPercentage extends Model
 
     protected $fillable = [
         'course_id',
+        'scheme_id',
         'overall_pass_percentage',
-        'theory_min_percentage',
+        'percentage_type',
     ];
 
     /**
@@ -23,5 +24,13 @@ class PassPercentage extends Model
     public function course()
     {
         return $this->belongsTo(Course::class, 'course_id');
+    }
+
+    /**
+     * Relation: PassPercentage belongs to Scheme
+     */
+    public function scheme()
+    {
+        return $this->belongsTo(Scheme::class, 'scheme_id');
     }
 }

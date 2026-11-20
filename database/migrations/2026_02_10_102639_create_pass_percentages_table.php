@@ -14,13 +14,19 @@ return new class extends Migration
         Schema::create('pass_percentages', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('course_id');
+            $table->unsignedBigInteger('scheme_id');
             $table->decimal('overall_pass_percentage', 5, 2);
-            $table->decimal('theory_min_percentage', 5, 2)->default(20);
+            $table->enum('percentage_type', ['separate', 'aggregate']);
             $table->timestamps();
             $table->foreign('course_id')
-              ->references('id')
-              ->on('courses')
-              ->onDelete('cascade');
+                ->references('id')
+                ->on('courses')
+                ->onDelete('cascade');
+
+            $table->foreign('scheme_id')
+                ->references('id')
+                ->on('schemes')
+                ->onDelete('cascade');
         });
     }
 
