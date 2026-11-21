@@ -134,6 +134,7 @@ Route::get('/result/subjects/filter', [SubjectController::class, 'getFilterSubje
 Route::get('/result/subjects/theory-paper/filter', [SubjectController::class, 'getFilterTheoryPaperSubjects'])->name('result.subjects.theory-paper.filter');
 Route::get('/student/examination-form/verified-subjects', [SubjectController::class, 'getStudentExamFormVerifiedSubjects'])->name('student.examination-form.verified-subjects');
 Route::get('/result/subjects/ncCourse/filter', [SubjectController::class, 'getFilterNcSubjects'])->name('result.subjects.ncCourse.filter');
+Route::get('/get-midsem-exams/{exam_id}', [ExamController::class, 'getMidSemExams']);
 Route::get('/get-mid-sem-exams', [MidSemExamController::class, 'getMidSemExamsCourseBased'])->name('coursebased.get.mid.sem.exams');
 
 Route::middleware(['backend.auth'])->prefix('backend')->group(function () {
@@ -232,9 +233,15 @@ Route::middleware(['backend.auth'])->prefix('backend')->group(function () {
         Route::get('/subject-wise/internal-marks/fetch', [ResultController::class, 'fetchInternalMarksSubjectWise'])
             ->name('subject-wise.internal-marks.fetch');
 
+        Route::post( '/internal-marks/save-obtained-marks', [ResultController::class, 'saveInternalMarks'] )->name('internal-marks.save-obtained');
+
         Route::post( '/internal-marks/lock-unlock', [ResultController::class, 'updateInternalMarksLockStatus'] )->name('internal-marks.lock-unlock');
 
         Route::post( '/internal-marks/grace-marks', [ResultController::class, 'updateGraceMarks'] )->name('internal-marks.grace-marks');
+
+        Route::post('internal-marks/export',[ResultController::class,'export'])->name('internal-marks.export');
+        Route::post('internal-marks/import',[ResultController::class,'import'])->name('internal-marks.import');
+
 
         Route::get('/external-marks', [ResultController::class, 'externalMarks'])
             ->name('external-marks');

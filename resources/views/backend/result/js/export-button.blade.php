@@ -1,64 +1,162 @@
 <script>
-// $("#print-btn").click(function () {
+$("#overall-internal-print-btn").click(function () {
 
-//     var content = $(".result-table").prop('outerHTML');
+    var content = $(".overall-internal-result-table").prop('outerHTML');
 
-//     var printWindow = window.open('', '', 'width=1200,height=800');
+    var printWindow = window.open('', '', 'width=1400,height=900');
 
-//     printWindow.document.write(`
-//         <html>
-//         <head>
-//             <title>Result Print</title>
+    printWindow.document.write(`
+        <html>
+        <head>
+            <title>Overall Internal Marks Result</title>
 
-//             <style>
+            <style>
 
-//                 @page{
-//                     size: A3 landscape;
-//                     margin:10mm;
-//                 }
+                @page {
+                    size: A3 landscape;
+                    margin: 8mm;
+                }
 
-//                 body{
-//                     font-family: Arial;
-//                 }
+                body {
+                    font-family: Arial, sans-serif;
+                    margin: 0;
+                    padding: 0;
+                    background: #fff;
+                }
 
-//                 table{
-//                     width:100%;
-//                     border-collapse: collapse;
-//                 }
+                .table-responsive {
+                    width: 100%;
+                    overflow: visible !important;
+                }
 
-//                 th,td{
-//                     border:1px solid #000;
-//                     padding:6px;
-//                     text-align:center;
-//                 }
+                table.overall-internal-result-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    border-spacing: 0;
+                    font-family: Arial, sans-serif;
+                    background: #fff;
+                    font-size: 11px;
+                }
 
-//                 h4{
-//                     margin:2px;
-//                 }
+                table.overall-internal-result-table th,
+                table.overall-internal-result-table td {
+                    border: 1px solid #222;
+                    padding: 5px 4px;
+                    text-align: center;
+                    vertical-align: middle;
+                    font-size: 10px;
+                }
 
-//                 .no-export{
-//                     display:none !important;
-//                 }
+                table.overall-internal-result-table thead th {
+                    font-weight: 600;
+                }
 
-//             </style>
+                .university-heading {
+                    font-size: 12px !important;
+                    font-weight: bold;
+                    text-transform: uppercase;
+                }
 
-//         </head>
+                .result-heading {
+                    font-size: 10px !important;
+                    font-weight: bold;
+                }
 
-//         <body>
+                .course-heading {
+                    font-size: 11px !important;
+                    font-weight: bold;
+                }
 
-//             ${content}
+                .subject-name {
+                    min-width: 75px;
+                    max-width: 100px;
+                    white-space: normal;
+                }
 
-//         </body>
+                .marks-cell {
+                    min-width: 45px;
+                }
 
-//         </html>
-//     `);
+                .student-row {
+                    height: 65px;
+                    page-break-inside: avoid;
+                }
 
-//     printWindow.document.close();
-//     printWindow.focus();
-//     printWindow.print();
+                .width-col-180 {
+                    min-width: 180px !important;
+                }
 
-// });
+                .font-size-8 {
+                    font-size: 7px !important;
+                }
 
+                .font-small {
+                    font-size: 10px !important;
+                }
+
+                p {
+                    margin: 0;
+                }
+
+                .text-danger {
+                    color: red !important;
+                }
+
+                .fw-bold {
+                    font-weight: bold;
+                }
+
+                .no-print,
+                .no-export {
+                    display: none !important;
+                }
+
+                thead {
+                    display: table-header-group;
+                }
+
+                tfoot {
+                    display: table-footer-group;
+                }
+
+                @media print {
+
+                    body {
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
+                    }
+
+                    .table-responsive {
+                        overflow: visible !important;
+                    }
+
+                    tr {
+                        page-break-inside: avoid;
+                    }
+
+                }
+
+            </style>
+
+        </head>
+
+        <body>
+
+            ${content}
+
+        </body>
+
+        </html>
+    `);
+
+    printWindow.document.close();
+
+    printWindow.onload = function () {
+        printWindow.focus();
+        printWindow.print();
+    };
+
+});
 </script>
 
 <script>
@@ -138,6 +236,8 @@ $("#print-btn").click(function () {
 
 });
 </script>
+
+
 
 
 <script>

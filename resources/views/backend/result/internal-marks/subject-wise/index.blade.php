@@ -35,22 +35,33 @@
                     <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="offcanvas" data-bs-target="#subjectwiseOffcanvasTop">
                         <i data-feather="filter" style="width:14px; height:14px;"></i> Fetch Internal Marks
                     </button>
+
+                    <button type="button" class="btn btn-sm btn-dark" data-bs-toggle="modal" data-bs-target="#importMarksModal">
+                        <i data-feather="upload" style="width:14px; height:14px;" class="me-1"></i>
+                        Import Mid Sem Marks
+                    </button>
                 </div>
             </div>
             <div class="card-body">
                 <div id="subjectwiseInternalMarksResult"></div>
-                
+
             </div>
         </div>
     </div>
 </div>
 
 <script src="{{ asset('assets/libs/jquery/jquery.min.js') }}"></script>
-<script src="{{ asset('assets/libs/jquery-validate/jquery.validate.min.js') }}"></script> 
+<script src="{{ asset('assets/libs/jquery-validate/jquery.validate.min.js') }}"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 @include('backend.result.internal-marks.subjectwise-search-marks-modal')
 @include('backend.result.js.search-subjectwise-result')
 @include('backend.result.js.fetch-subjectwise-internal-marks')
+
+
+@include('backend.result.internal-marks.subject-wise.components.import-marks-modal')
+@include('backend.result.internal-marks.subject-wise.components.export-sample-modal')
+@include('backend.result.internal-marks.subject-wise.components.sample-download-js')
+
 @include('backend.result.js.export-button')
 @endsection

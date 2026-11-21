@@ -57,7 +57,31 @@
                     </div>
                 </li>
 
-                    <li>
+                <li>
+                    <a href="#examination-form-data" data-bs-toggle="collapse">
+                        <i data-feather="users"></i>
+                        <span> Examination Form Data </span>
+                        <span class="menu-arrow"></span>
+                    </a>
+                    <div class="collapse" id="examination-form-data">
+                        <ul class="nav-second-level">
+                            <li>
+                                <a href="{{ route('admin.examination-form.index') }}" class="tp-link">Exam Form List</a>
+                            </li>
+                            <li>
+                                <a href="{{ route('admin.cutlist.index') }}" class="tp-link">Cutlist List</a>
+                            </li>
+                            <li>
+                                <a href="{{ route('admin.attendance-sheet.index') }}" class="tp-link">Attendance Sheet</a>
+                            </li>
+                            <li>
+                                <a href="{{ route('admin.download-exam-form') }}" class="tp-link">Download Exam Form</a>
+                            </li>
+                        </ul>
+                    </div>
+                </li>
+
+                <li>
                     <a href="#result" data-bs-toggle="collapse">
                         <i data-feather="award"></i>
                         <span> Result Prepare </span>
@@ -65,12 +89,23 @@
                     </a>
                     <div class="collapse" id="result">
                         <ul class="nav-second-level">
-                            <li><a href="{{ route('results.internal-marks') }}" class="tp-link">Internal Marks</a></li>
-                            <li><a href="{{ route('results.external-marks') }}" class="tp-link">External Marks</a></li>
-                            <li><a href="{{ route('results.result-prepare') }}" class="tp-link">Results</a></li>
+                            <li>
+                                <a href="#regularResult" data-bs-toggle="collapse">
+                                    <span>Regular Result</span>
+                                    <span class="menu-arrow"></span>
+                                </a>
+
+                                <div class="collapse" id="regularResult">
+                                    <ul class="nav-third-level">
+                                        <li><a href="{{ route('results.internal-marks') }}" class="tp-link">Internal Marks</a></li>
+                                        <li><a href="{{ route('results.external-marks') }}" class="tp-link">External Marks</a></li>
+                                        <li><a href="{{ route('results.result-prepare') }}" class="tp-link">Results</a></li>
+                                    </ul>
+                                </div>
+                            </li>
                             <li>
                                 <a href="#suppleResult" data-bs-toggle="collapse">
-                                    <span>Supple/Compartment Result</span>
+                                    <span>Reappear Result</span>
                                     <span class="menu-arrow"></span>
                                 </a>
 
@@ -196,30 +231,6 @@
                                 </div>
                             </li> --}}
 
-                        </ul>
-                    </div>
-                </li>
-
-                <li>
-                    <a href="#examination-form-data" data-bs-toggle="collapse">
-                        <i data-feather="users"></i>
-                        <span> Examination Form Data </span>
-                        <span class="menu-arrow"></span>
-                    </a>
-                    <div class="collapse" id="examination-form-data">
-                        <ul class="nav-second-level">
-                            <li>
-                                <a href="{{ route('admin.examination-form.index') }}" class="tp-link">Exam Form List</a>
-                            </li>
-                            <li>
-                                <a href="{{ route('admin.cutlist.index') }}" class="tp-link">Cutlist List</a>
-                            </li>
-                            <li>
-                                <a href="{{ route('admin.attendance-sheet.index') }}" class="tp-link">Attendance Sheet</a>
-                            </li>
-                            <li>
-                                <a href="{{ route('admin.download-exam-form') }}" class="tp-link">Download Exam Form</a>
-                            </li>
                         </ul>
                     </div>
                 </li>

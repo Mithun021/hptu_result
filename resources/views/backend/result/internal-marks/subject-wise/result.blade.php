@@ -28,520 +28,440 @@
     vertical-align: bottom;
 }
 
-/* Footer top spacing for signature */
 .result-table-a4 tfoot td::before {
     content: "";
     display: block;
     height: 40px;
 }
 
-/* Header section styling */
+/* Header */
 .result-header h4 {
     margin: 2px 0;
 }
 
 .result-header p {
     margin: 4px 0;
-    text-align: left
+    text-align: left;
+}
+
+/* Obtained Marks */
+.obtained-marks-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+.obtained-marks-input {
+    width: 90px;
+    text-align: center;
+}
+
+.marks-absent-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    font-size: 11px;
+}
+
+.marks-absent-wrapper input {
+    cursor: pointer;
+}
+
+td.align-left{
+    text-align: left !important;
+}
+td.align-right{
+    text-align: right !important;
 }
 
 </style>
 
+
 <div class="table-responsive">
 
-<table class="result-table-a4">
+    <table class="result-table-a4">
 
-    <!-- ===============================
-            RESULT HEADER
-    ================================ -->
+        {{-- ===============================
+             RESULT HEADER
+        ================================ --}}
 
-    <thead>
+        <thead>
 
-        <tr>
-            <td colspan="7" class="result-header">
-
-                <center>
-                    <h4>CONTROLLER OF EXAMINATIONS</h4>
-
-                    <h4>
-                        GURU ANGAD DEV VETERINARY AND ANIMAL SCIENCE UNIVERSITY,
-                        LUDHIANA (INDIA)
-                    </h4>
-
-                    <h4>{{ $className }} Session {{ $batch->name ?? '_' }}</h4>
-
-                    <h4>{{ $midsemexam->mid_sem_exam_name }}</h4>
-                </center>
-
-                <p>
-                    <b>{{ $course->name }} ({{ $branch->name ?? '' }})</b>
-                </p>
-
-                <p>
-                    Subject : {{ $subject->name }} ({{ $subject->subject_code }})
-                </p>
-
-                <p>
-                    Maximum Marks :
-
-                    @if($marksType == 'Mid-Sem')
-                        {{ $subject->mid_sem_marks1 }}
-
-                    @elseif($marksType == 'Quiz')
-                        {{ $subject->mid_sem_marks2 }}
-
-                    @elseif($marksType == 'Practical')
-                        {{ $subject->mid_sem_marks3 }}
-                        
-                    @elseif($marksType == 'Internal 1')
-
-                        {{ $subject->internal1 }}
-
-                    @elseif($marksType == 'Internal 2')
-
-                        {{ $subject->internal2 }}
-
-                    @elseif($marksType == 'Internal 3')
-
-                        {{ $subject->internal3 }}
-
-                    @else
-                        -
-                    @endif
-
-                </p>
-
-            </td>
-        </tr>
+            <tr>
+                <td colspan="7">Himachal Pradesh Technical Univesity,Hamirpur</td>
+            </tr>
+            <tr>
+                <td colspan="7">{{ ucwords(strtoupper($exam->exam_resultsheet_name ?? $exam->name )) }}</td>
+            </tr>
+            <tr>
+                <td colspan="7">{{ $course->name }} | {{ $scheme->name }} | {{ $branch->name ?? '' }} | {{ $className }} | Regular</td>
+            </tr>
+            <tr>
+                <td colspan="5" class="align-left">Subject : {{ $subject->name }} ({{ $subject->subject_code }}) | {{ $subject->type }}</td>
+                <td colspan="2" class="align-right">Maximum Marks : {{ $subject->internal_marks }}</td>
+            </tr>
 
 
-        <!-- ===============================
-                TABLE COLUMN HEADER
-        ================================ -->
-
-        <tr>
-            <th class="no-export"><input type="checkbox" id="check-all"></th>
-            <th>Admission Number / Roll No</th>
-            <th>Student Name</th>
-            <th>Max Marks</th>
-            <th>Obtained Marks</th>
-            <th>Grace Marks</th>
-            <th>Moderation Marks</th>
-            <th class="no-export">Status</th>
-        </tr>
-
-    </thead>
-
-
-    <!-- ===============================
-            STUDENT DATA
-    ================================ -->
-
-    <tbody>
-
-        @forelse($students as $student)
-        
-            @if(!in_array($student->id, $studentSubjects))
-                @continue
-            @endif
+            {{-- ===============================
+                 TABLE COLUMN HEADER
+            ================================ --}}
 
             <tr>
 
-                <td class="no-export">
+                <th>
+                    <input type="checkbox" id="check-all" class="no-export"> Sn no.
+                </th>
 
-                    <input
-                        type="checkbox"
-                        class="lock-check"
+                <th>Admission Number / Roll No</th>
 
-                        data-student="{{ $student->id }}"
-                        data-subject="{{ $subject->id }}"
-                        data-marks-type="{{ $marksType }}"
+                <th>Student Name</th>
 
-                        data-course-type="{{ $course->course_type ?? $student->course_type }}"
-                        data-course-id="{{ $course->id }}"
-                        data-branch-id="{{ $branch->id }}"
-                        data-batch-id="{{ $batch->id }}"
-                        data-scheme-id="{{ $student->scheme_id }}"
-                        data-semester-id="{{ request('semester_id') }}"
-                        data-annual-semester-id="{{ request('annual_semester_id') }}"
-                        data-exam-id="{{ request('exam_id') }}"
-                        data-midsem-exam-id="{{ request('midsem_exam_id') }}"
+                <th>Max Marks</th>
 
-                    >
+                <th>Obtained Marks</th>
 
-                </td>
+                <th>Grace Marks</th>
 
-                <!-- Admission / Roll -->
-                <td>
-                    {{ $student->admission_no ?? $student->university_roll_no }}
-                </td>
+                <th class="no-export">Status</th>
 
-                <!-- Student Name -->
-                <td>
-                    {{ $student->student_name }}
-                </td>
+            </tr>
 
-                <!-- Max Marks -->
-                <td>
+        </thead>
 
-                    @if($marksType == 'Mid-Sem')
 
-                        {{ $subject->mid_sem_marks1 }}
+        {{-- ===============================
+             STUDENT DATA
+        ================================ --}}
 
-                    @elseif($marksType == 'Quiz')
+        <tbody>
+            @php
+                $num = 0;
+            @endphp
+            @forelse($students as $student)
 
-                        {{ $subject->mid_sem_marks2 }}
-
-                    @elseif($marksType == 'Practical')
-
-                        {{ $subject->mid_sem_marks3 }}
-
-                    @elseif($marksType == 'Internal 1')
-
-                        {{ $subject->internal1 }}
-
-                    @elseif($marksType == 'Internal 2')
-
-                        {{ $subject->internal2 }}
-
-                    @elseif($marksType == 'Internal 3')
-
-                        {{ $subject->internal3 }}
-
-                    @else
-
-                        -
-
-                    @endif
-
-                </td>
-                
-                <!-- Obtained Marks -->
-                {{-- <td>
-
-                    @php
-                        $isEnrolled = in_array($student->id, $studentSubjects);
-                    @endphp
-
-                    @if(!$isEnrolled)
-                        <span style="color:#999;">NA</span>
-
-                    @elseif(array_key_exists($student->id, $marks))
-
-                        @if($marks[$student->id] == 'AB')
-                            <span style="color:red;font-weight:600;">AB</span>
-                        @else
-                            {{ $marks[$student->id] }}
-                        @endif
-
-                    @else
-
-                        <span style="color:#df610d;">Marks Not Uploaded</span>
-
-                    @endif
-
-                </td> --}}
-                <!-- Obtained Marks -->
-                <td>
-
-                    @php
-
-                        $isEnrolled = in_array($student->id, $studentSubjects);
-
-                    @endphp
-
-                    @if(!$isEnrolled)
-
-                        <span style="color:#999;">NA</span>
-
-                    @elseif(array_key_exists($student->id, $marks))
-
-                        @php
-
-                            $obtainedMarks = $marks[$student->id]['obtained_marks'] ?? null;
-
-                            $examStatus = $marks[$student->id]['exam_status'] ?? null;
-
-                            $isLocked = $marks[$student->id]['is_locked'] ?? 0;
-
-                        @endphp
-
-                        @if($examStatus == 'absent')
-
-                            <span style="color:red;font-weight:600;">
-                                AB
-                            </span>
-
-                        @elseif($obtainedMarks !== null && $obtainedMarks !== '')
-
-                            {{ $obtainedMarks }}
-
-                        @else
-
-                            <span style="color:#df610d;">
-                                Marks Not Uploaded
-                            </span>
-
-                        @endif
-
-                    @else
-
-                        <span style="color:#df610d;">
-                            Marks Not Uploaded
-                        </span>
-
-                    @endif
-
-                </td>
-                
-                @if ($courseType == 'Annual Based')
-                <td>
-                     @if(array_key_exists($student->id, $marks))
-
-                        @php
-
-                            $graceMarks = $marks[$student->id]['grace_marks'] ?? 0;
-
-                            $isLocked = $marks[$student->id]['is_locked'] ?? 0;
-
-                        @endphp
-
-                        
-
-                            {{ $graceMarks }}
-
-                        
-                    @endif
-                </td>
-                
-                @else
-                
-                <td>
-
-                    @if(array_key_exists($student->id, $marks))
-
-                        @php
-
-                            $graceMarks = $marks[$student->id]['grace_marks'] ?? 0;
-
-                            $isLocked = $marks[$student->id]['is_locked'] ?? 0;
-
-                        @endphp
-
-                        @if($isLocked == 1)
-
-                            {{ $graceMarks }}
-
-                        @else
-
-                            <input
-                                type="number"
-                                class="form-control form-control-sm grace-marks-input"
-
-                                value="{{ $graceMarks }}"
-                                min="0"
-                                style="width:80px;"
-
-                                data-student="{{ $student->id }}"
-                                data-subject="{{ $subject->id }}"
-                                data-marks-type="{{ $marksType }}"
-
-                                data-course-type="{{ $course->course_type ?? $student->course_type }}"
-                                data-course-id="{{ $course->id }}"
-                                data-branch-id="{{ $branch->id }}"
-                                data-batch-id="{{ $batch->id }}"
-                                data-scheme-id="{{ $student->scheme_id }}"
-
-                                data-semester-id="{{ request('semester_id') }}"
-                                data-annual-semester-id="{{ request('annual_semester_id') }}"
-
-                                data-exam-id="{{ request('exam_id') }}"
-                                data-midsem-exam-id="{{ request('midsem_exam_id') }}"
-                            >
-
-                        @endif
-
-                    @else
-
-                        -
-
-                    @endif
-
-                </td>
-                
+                @if(!in_array($student->id, $studentSubjects))
+                    @continue
                 @endif
-                
-                
-                <td>
 
-                    @php
+                @php
 
-                        $adjustmentData = $academicAdjustments[$student->id] ?? null;
+                    $markData = $marks[$student->id] ?? null;
 
-                        $moderationMarks = $adjustmentData->adjustment_marks ?? 0;
+                    $obtainedMarks = $markData['obtained_marks'] ?? '';
 
-                        $adjustmentType = $adjustmentData->adjustment_type ?? 'moderation';
+                    $examStatus = $markData['exam_status'] ?? 'present';
 
-                        $isLocked = $marks[$student->id]['is_locked'] ?? 0;
+                    $isLocked = $markData['is_locked'] ?? 0;
 
-                    @endphp
+                    $graceMarks = $markData['grace_marks'] ?? 0;
 
-                    {{-- ONLY PRACTICAL SUBJECT --}}
-                    @if(
-                        strtolower($subject->type) == 'practical'
-                        && $marksType == 'Practical'
-                    )
+                    $hasMarks = $markData !== null;
 
-                        @if(!$isEnrolled)
+                    $isAbsent = $hasMarks && $examStatus == 'absent';
 
-                            <span style="color:#999;">NA</span>
+                @endphp
 
-                        @elseif(array_key_exists($student->id, $marks))
+                <tr>
 
-                            {{-- LOCKED --}}
-                            @if($isLocked == 1)
+                    {{-- CHECKBOX --}}
 
-                                {{ $moderationMarks }}
+                    <td class="">
+
+                        <input
+                            type="checkbox"
+                            class="lock-check no-export"
+
+                            data-student="{{ $student->id }}"
+                            data-subject="{{ $subject->id }}"
+                            data-marks-type="{{ $marksType }}"
+
+                            data-course-type="{{ $course->course_type ?? $student->course_type }}"
+                            data-course-id="{{ $course->id }}"
+                            data-branch-id="{{ $branch->id }}"
+                            data-batch-id="{{ $batch->id }}"
+                            data-scheme-id="{{ $student->scheme_id }}"
+
+                            data-semester-id="{{ request('semester_id') }}"
+                            data-annual-semester-id="{{ request('annual_semester_id') }}"
+
+                            data-exam-id="{{ request('exam_id') }}"
+                            data-midsem-exam-id="{{ request('midsem_exam_id') }}"
+
+                        >
+
+                        {{ ++$num }}
+                    </td>
+
+
+                    {{-- ADMISSION / ROLL NUMBER --}}
+
+                    <td>
+                        {{ $student->admission_no ?? $student->university_roll_no }}
+                    </td>
+
+
+                    {{-- STUDENT NAME --}}
+
+                    <td>
+                        {{ $student->student_name }}
+                    </td>
+
+
+                    {{-- MAX MARKS --}}
+
+                    <td>
+                        {{ $subject->internal_marks }}
+                    </td>
+
+
+                    {{-- ===============================
+                         OBTAINED MARKS
+                    ================================ --}}
+
+                    <td>
+
+                        @if($hasMarks && $isLocked == 1)
+
+                            {{-- LOCKED RECORD --}}
+
+                            @if($examStatus == 'absent')
+
+                                <span style="color:red;font-weight:600;">
+
+                                    AB ({{ $obtainedMarks !== null && $obtainedMarks !== '' ? $obtainedMarks : 0 }})
+
+                                </span>
 
                             @else
 
-                                {{-- EDIT MODE --}}
-                                <div style="display:flex;flex-direction:column;gap:4px;">
-
-                                    <input
-                                        type="number"
-                                        class="form-control form-control-sm moderation-marks-input"
-
-                                        value="{{ $moderationMarks }}"
-                                        min="0"
-                                        step="0.01"
-
-                                        style="width:80px;"
-
-                                        data-student="{{ $student->id }}"
-                                        data-subject="{{ $subject->id }}"
-                                        data-exam="{{ request('exam_id') }}"
-                                        data-marks-type="{{ "external" }}"
-
-                                        data-adjustment-scope="external"
-                                    >
-
-                                    <input type="hidden"
-                                        class="form-control form-control-sm moderation-type" value="moderation"
-                                        style="width:80px;"
-                                    >
-
-                                    {{-- <select
-                                        class="form-control form-control-sm moderation-type"
-                                        style="width:80px;"
-                                    >
-                                        <option value="moderation"
-                                            {{ $adjustmentType == 'moderation' ? 'selected' : '' }}>
-                                            Moderation
-                                        </option>
-
-                                        <option value="grace"
-                                            {{ $adjustmentType == 'grace' ? 'selected' : '' }}>
-                                            Grace
-                                        </option>
-                                    </select> --}}
-
-                                    <button
-                                        type="button"
-
-                                        class="btn btn-primary btn-sm save-moderation"
-
-                                        data-student="{{ $student->id }}"
-                                        data-subject="{{ $subject->id }}"
-                                        data-exam="{{ request('exam_id') }}"
-                                        data-marks-type="{{ "external" }}"
-
-                                        data-adjustment-scope="external"
-
-                                        style="font-size:10px;padding:2px 5px;"
-                                    >
-                                        Save
-                                    </button>
-
-                                </div>
+                                <span style="font-weight:600;">
+                                    {{ $obtainedMarks }}
+                                </span>
 
                             @endif
 
                         @else
 
-                            -
+                            {{-- EDITABLE / NEW RECORD --}}
+
+                            <div class="obtained-marks-wrapper">
+
+                                <input
+                                    type="number"
+
+                                    class="form-control form-control-sm obtained-marks-input"
+
+                                    value="{{ $isAbsent ? 0 : $obtainedMarks }}"
+
+                                    min="0"
+
+                                    max="{{ $subject->internal_marks }}"
+
+                                    step="0.01"
+
+                                    placeholder="Enter Marks"
+
+                                    style="width:90px;"
+
+                                    {{ $isAbsent ? 'readonly' : '' }}
+
+                                    data-student="{{ $student->id }}"
+                                    data-subject="{{ $subject->id }}"
+                                    data-marks-type="{{ $marksType }}"
+
+                                    data-course-type="{{ $course->course_type ?? $student->course_type }}"
+                                    data-course-id="{{ $course->id }}"
+                                    data-branch-id="{{ $branch->id }}"
+                                    data-batch-id="{{ $batch->id }}"
+                                    data-scheme-id="{{ $student->scheme_id }}"
+
+                                    data-semester-id="{{ request('semester_id') }}"
+                                    data-annual-semester-id="{{ request('annual_semester_id') }}"
+
+                                    data-exam-id="{{ request('exam_id') }}"
+                                    data-midsem-exam-id="{{ request('midsem_exam_id') }}"
+                                    data-max-marks="{{ $subject->internal_marks }}"
+
+                                >
+
+
+                                {{-- MARKS ABSENT CHECKBOX --}}
+
+                                <div class="marks-absent-wrapper">
+
+                                    <input
+                                        type="checkbox"
+
+                                        class="marks-absent-checkbox"
+
+                                        id="absent_{{ $student->id }}"
+
+                                        {{ $isAbsent ? 'checked' : '' }}
+
+                                    >
+
+                                    <label for="absent_{{ $student->id }}">
+                                        Marks Absent
+                                    </label>
+
+                                </div>
+
+                            </div>
 
                         @endif
 
+                    </td>
+
+
+                    {{-- ===============================
+                         GRACE MARKS
+                    ================================ --}}
+
+                    @if($courseType == 'Annual Based')
+
+                        <td>
+
+                            @if($hasMarks)
+
+                                {{ number_format((float) $graceMarks, 2) }}
+
+                            @else
+
+                                -
+
+                            @endif
+
+                        </td>
+
                     @else
 
-                        {{-- NON PRACTICAL --}}
-                        -
+                        <td>
+
+                            @if($hasMarks)
+
+                                @if($isLocked == 1)
+
+                                    {{ number_format((float) $graceMarks, 2) }}
+
+                                @else
+
+                                    <input
+                                        type="number"
+
+                                        class="form-control form-control-sm grace-marks-input"
+
+                                        value="{{ $graceMarks }}"
+
+                                        min="0"
+
+                                        style="width:80px;"
+
+                                        data-student="{{ $student->id }}"
+                                        data-subject="{{ $subject->id }}"
+                                        data-marks-type="{{ $marksType }}"
+
+                                        data-course-type="{{ $course->course_type ?? $student->course_type }}"
+                                        data-course-id="{{ $course->id }}"
+                                        data-branch-id="{{ $branch->id }}"
+                                        data-batch-id="{{ $batch->id }}"
+                                        data-scheme-id="{{ $student->scheme_id }}"
+
+                                        data-semester-id="{{ request('semester_id') }}"
+                                        data-annual-semester-id="{{ request('annual_semester_id') }}"
+
+                                        data-exam-id="{{ request('exam_id') }}"
+                                        data-midsem-exam-id="{{ request('midsem_exam_id') }}"
+
+                                    >
+
+                                @endif
+
+                            @else
+
+                                -
+
+                            @endif
+
+                        </td>
 
                     @endif
 
-                </td>
-                
-                
-                <td class="no-export">
 
-                    @if(array_key_exists($student->id, $marks))
+                    {{-- ===============================
+                         STATUS
+                    ================================ --}}
 
-                        @php
+                    <td class="no-export">
 
-                            $isLocked = $marks[$student->id]['is_locked'] ?? 0;
+                        @if($hasMarks)
 
-                        @endphp
+                            @if($isLocked == 1)
 
-                        @if($isLocked == 1)
+                                <span class="badge bg-success">
+                                    Locked
+                                </span>
 
-                            <span class="badge bg-success">
-                                Locked
-                            </span>
+                            @else
+
+                                <span class="badge bg-danger">
+                                    Unlocked
+                                </span>
+
+                            @endif
 
                         @else
 
-                            <span class="badge bg-danger">
-                                Unlocked
+                            <span class="badge bg-secondary">
+                                No Data
                             </span>
 
                         @endif
 
-                    @else
+                    </td>
 
-                        <span class="badge bg-secondary">
-                            No Data
+                </tr>
+
+            @empty
+
+                <tr>
+
+                    <td colspan="7">
+
+                        <span style="color:red;">
+                            No Students Found
                         </span>
 
-                    @endif
+                    </td>
 
-                </td>
-                
+                </tr>
 
-            </tr>
+            @endforelse
 
-        @empty
+        </tbody>
+
+
+        {{-- ===============================
+             FOOTER
+        ================================ --}}
+
+        <tfoot>
 
             <tr>
-                <td colspan="7">
-                    <span style="color:red;">No Students Found</span>
+
+                <td colspan="3">
+                    Instructor(s)
                 </td>
+
+                <td colspan="4">
+                    HOD
+                </td>
+
             </tr>
 
-        @endforelse
+        </tfoot>
 
-    </tbody>
-    <tfoot>
-        <tr>
-            <td colspan="3">
-                    Instructor(s)
-            </td>
-            <td colspan="3">
-                    HOD
-            </td>
-        </tr>
-    </tfoot>
-
-</table>
+    </table>
 
 </div>

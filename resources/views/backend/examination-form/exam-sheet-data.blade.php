@@ -255,7 +255,7 @@
                         </span>
 
                         <small class="father-name">
-                            {{ $form->student->father_name ?? '-' }}
+                            {{ $form->student->university_roll_no ?? '-' }} / {{ $form->student->father_name ?? '-' }}
                         </small>
                     </td>
 

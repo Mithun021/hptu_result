@@ -55,6 +55,21 @@
         <script src="{{ asset('assets/toastify/toastify-js') }}"></script>
         <script src="{{ asset('assets/libs/jquery-validate/jquery.validate.min.js') }}"></script>
         <script>
+
+            /* Prevent Mouse Scroll from Changing Number Input */
+            $(document).on("wheel", 'input[type="number"]', function () {
+                $(this).blur();
+            });
+
+            /* Prevent Keyboard Up/Down Arrow from Changing Number Input */
+            $(document).on("keydown", 'input[type="number"]', function (e) {
+
+                if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+                    e.preventDefault();
+                }
+
+            });
+
             document.addEventListener("DOMContentLoaded", function () {
 
                 @if (session('success'))

@@ -133,6 +133,8 @@ $(document).ready(function () {
 
             type: "GET",
 
+            dataType: "json",
+
             data: {
                 course_type: courseType,
                 course_id: courseId,
@@ -143,42 +145,138 @@ $(document).ready(function () {
                 annual_semester_id: annualSemesterId
             },
 
-            success: function (subjects) {
+            success: function (response) {
 
-                $('#export_subject_id').html(
-                    '<option value="">--Select Subject--</option>'
+                $('#export_subject_id').empty();
+
+                // =========================
+                // SERVER RESPONSE CHECK
+                // =========================
+                if (!response.success) {
+
+                    $('#export_subject_id').append(
+                        $('<option>', {
+                            value: '',
+                            text: response.message || 'Unable to load subjects'
+                        })
+                    );
+
+                    console.error('Subject API Error:', response);
+
+                    return;
+                }
+
+                let subjects = response.data || [];
+
+                $('#export_subject_id').append(
+                    $('<option>', {
+                        value: '',
+                        text: '--Select Subject--'
+                    })
                 );
 
+                // =========================
+                // SUBJECTS FOUND
+                // =========================
                 if (subjects.length > 0) {
 
-                    $.each(subjects, function (_, subject) {
+                    $.each(subjects, function (index, subject) {
 
                         $('#export_subject_id').append(
                             $('<option>', {
                                 value: subject.id,
-                                text: subject.name
+                                text: subject.name +
+                                    (subject.subject_code
+                                        ? ' (' + subject.subject_code + ')'
+                                        : '')
                             })
                         );
 
                     });
 
+                    console.log('Subjects Loaded:', subjects);
+
                 } else {
 
-                    $('#export_subject_id').html(
-                        '<option value="">No Subject Found</option>'
+                    $('#export_subject_id').empty().append(
+                        $('<option>', {
+                            value: '',
+                            text: 'No Subject Found'
+                        })
                     );
+
+                    console.warn('No Subject Found. Debug Details:', response.debug);
+
+                    console.table(response.debug ? {
+                        login_type: response.debug.login_type,
+                        teacher_id: response.debug.teacher_id,
+                        matching_assignments: response.debug.matching_assignments,
+                        assignments_with_selected_batch: response.debug.assignments_with_selected_batch,
+                        assigned_subject_ids: JSON.stringify(response.debug.assigned_subject_ids),
+                        subjects_before_teacher_assignment_filter: response.debug.subjects_before_teacher_assignment_filter,
+                        final_subject_count: response.debug.final_subject_count
+                    } : {});
 
                 }
 
             },
 
-            error: function (xhr) {
+            // =========================
+            // AJAX ERROR
+            // =========================
+            error: function (xhr, status, error) {
 
-                console.log(xhr.responseText);
+                $('#export_subject_id').empty();
 
-                $('#export_subject_id').html(
-                    '<option value="">Failed to load subjects</option>'
+                let message = 'Failed to load subjects.';
+
+                let response = xhr.responseJSON;
+
+                if (response) {
+
+                    message = response.message || message;
+
+                    // Validation errors
+                    if (response.errors) {
+
+                        let validationMessages = [];
+
+                        $.each(response.errors, function (field, errors) {
+
+                            validationMessages.push(
+                                field + ': ' + errors.join(', ')
+                            );
+
+                        });
+
+                        message += ' ' + validationMessages.join(' | ');
+                    }
+
+                    if (response.error) {
+                        message += ' ' + response.error;
+                    }
+
+                } else if (xhr.responseText) {
+
+                    message += ' Server Response: ' +
+                        xhr.responseText.substring(0, 300);
+
+                }
+
+                $('#export_subject_id').append(
+                    $('<option>', {
+                        value: '',
+                        text: message.substring(0, 180)
+                    })
                 );
+
+                console.error('Subject AJAX Error:', {
+                    status: xhr.status,
+                    ajaxStatus: status,
+                    error: error,
+                    response: response,
+                    responseText: xhr.responseText
+                });
 
             }
 

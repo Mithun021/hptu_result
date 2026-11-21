@@ -21,6 +21,8 @@ $(document).ready(function () {
 
             course_id: { required: true },
 
+            scheme_id: { required: true },
+
             branch_id: { required: true },
 
             batch_id: { required: true },
@@ -52,6 +54,8 @@ $(document).ready(function () {
             course_type: "Select course type",
 
             course_id: "Select course",
+
+            scheme_id: "Select scheme",
 
             branch_id: "Select branch",
 
@@ -338,7 +342,7 @@ $(document).ready(function () {
 
     });
 
-    
+
     /*
     ==========================================
     LOCK / UNLOCK UPDATE
@@ -441,6 +445,7 @@ $(document).ready(function () {
     ==========================================
     */
 
+
     $(document).on("change", ".grace-marks-input", function () {
 
         let input = $(this);
@@ -483,20 +488,34 @@ $(document).ready(function () {
 
             success: function (response) {
 
-                console.log(response.message);
+                if (response.status) {
+
+                    showToast(response.message, "success");
+
+                } else {
+
+                    showToast(response.message || "Unable to update grace marks.", "warning");
+
+                }
 
             },
 
-            error: function () {
+            error: function (xhr) {
 
-                alert("Failed to update grace marks");
+                let message = "Failed to update grace marks";
+
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    message = xhr.responseJSON.message;
+                }
+
+                showToast(message, "error");
 
             }
 
         });
 
     });
-    
+
     /*
     ==========================================
     TOAST
@@ -525,14 +544,17 @@ $(document).ready(function () {
 
             position: "right",
 
+            close: true,
+
             backgroundColor: bgColor,
 
             stopOnFocus: true
 
         }).showToast();
     }
-    
-    
+
+
+
     /*
     ==========================================
     SAVE MODERATION
@@ -643,4 +665,354 @@ $(document).ready(function () {
 
 });
 
+</script>
+
+<script>
+$(document).ready(function () {
+
+    /*
+    |--------------------------------------------------------------------------
+    | COMMON TOASTIFY FUNCTION
+    |--------------------------------------------------------------------------
+    */
+
+    function showToast(message, type = 'success') {
+
+        let backgroundColor;
+
+        if (type === 'success') {
+
+            backgroundColor = "linear-gradient(to right, #00b09b, #96c93d)";
+
+        } else if (type === 'warning') {
+
+            backgroundColor = "linear-gradient(to right, #f7971e, #ffd200)";
+
+        } else {
+
+            backgroundColor = "linear-gradient(to right, #ff416c, #ff4b2b)";
+
+        }
+
+        Toastify({
+
+            text: message,
+
+            duration: 4000,
+
+            gravity: "top",
+
+            position: "right",
+
+            close: true,
+
+            backgroundColor: backgroundColor,
+
+            stopOnFocus: true
+
+        }).showToast();
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | SAVE / UPDATE OBTAINED MARKS FUNCTION
+    |--------------------------------------------------------------------------
+    */
+
+    function saveObtainedMarks(input) {
+
+        let wrapper = input.closest('.obtained-marks-wrapper');
+
+        let absentCheckbox = wrapper.find('.marks-absent-checkbox');
+
+        let obtainedMarks = input.val();
+
+        let isAbsent = absentCheckbox.is(':checked');
+
+        let examStatus = isAbsent ? 'absent' : 'present';
+
+        let maxMarks = parseFloat(input.attr('max'));
+
+        let enteredMarks = parseFloat(obtainedMarks);
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | VALIDATION
+        |--------------------------------------------------------------------------
+        */
+
+        if (!isAbsent && obtainedMarks === '') {
+
+            showToast('Please enter obtained marks.', 'warning');
+
+            input.focus();
+
+            return;
+        }
+
+        if (!isAbsent && (isNaN(enteredMarks) || enteredMarks < 0)) {
+
+            showToast('Please enter valid obtained marks.', 'warning');
+
+            input.focus();
+
+            return;
+        }
+
+        if (!isAbsent && enteredMarks > maxMarks) {
+
+            showToast(
+                'Obtained marks cannot exceed maximum marks (' + maxMarks + ').',
+                'warning'
+            );
+
+            input.focus();
+
+            return;
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | PREVENT DUPLICATE REQUEST
+        |--------------------------------------------------------------------------
+        */
+
+        if (input.data('saving')) {
+            return;
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | REQUEST DATA
+        |--------------------------------------------------------------------------
+        */
+
+        let data = {
+
+            _token: "{{ csrf_token() }}",
+
+            student_id: input.data('student'),
+
+            subject_id: input.data('subject'),
+
+            marks_type: input.data('marks-type'),
+
+            course_type: input.data('course-type'),
+
+            course_id: input.data('course-id'),
+
+            branch_id: input.data('branch-id'),
+
+            batch_id: input.data('batch-id'),
+
+            scheme_id: input.data('scheme-id') || '',
+
+            semester_id: input.data('semester-id') || '',
+
+            annual_semester_id: input.data('annual-semester-id') || '',
+
+            exam_id: input.data('exam-id'),
+
+            midsem_exam_id: input.data('midsem-exam-id'),
+
+            max_marks: input.data('max-marks'),
+
+            exam_status: examStatus,
+
+            obtained_marks: isAbsent ? 0 : obtainedMarks
+
+        };
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | AJAX SAVE
+        |--------------------------------------------------------------------------
+        */
+
+        $.ajax({
+
+            url: "{{ route('results.internal-marks.save-obtained') }}",
+
+            type: "POST",
+
+            data: data,
+
+            beforeSend: function () {
+
+                input.data('saving', true);
+
+                input.css('border-color', '#f0ad4e');
+
+            },
+
+            success: function (response) {
+
+                input.css('border-color', '#28a745');
+
+                /*
+                |--------------------------------------------------------------------------
+                | UPDATE INPUT VALUE
+                |--------------------------------------------------------------------------
+                */
+
+                if (isAbsent) {
+
+                    input.val(0);
+
+                    input.prop('readonly', true);
+
+                }
+
+                /*
+                |--------------------------------------------------------------------------
+                | UPDATE STATUS
+                |--------------------------------------------------------------------------
+                */
+
+                let row = input.closest('tr');
+
+                let statusCell = row.find('td:last');
+
+                statusCell.html(
+                    '<span class="badge bg-danger">Unlocked</span>'
+                );
+
+                showToast(
+                    response.message || 'Obtained marks saved successfully.',
+                    'success'
+                );
+
+            },
+
+            error: function (xhr, status, error) {
+
+                console.error('========== SAVE INTERNAL MARKS ERROR ==========');
+                console.error('HTTP Status:', xhr.status);
+                console.error('Status Text:', status);
+                console.error('Error:', error);
+                console.error('Response:', xhr.responseText);
+                console.error('Response JSON:', xhr.responseJSON);
+                console.error('================================================');
+
+                let message = 'Unable to save marks.';
+
+                if (xhr.responseJSON) {
+
+                    // Laravel validation errors
+                    if (xhr.responseJSON.errors) {
+                        let errors = xhr.responseJSON.errors;
+
+                        message = Object.values(errors)
+                            .flat()
+                            .join('\n');
+                    }
+
+                    // Controller ka custom error message
+                    else if (xhr.responseJSON.message) {
+                        message = xhr.responseJSON.message;
+                    }
+
+                } else if (xhr.responseText) {
+
+                    // Server se HTML ya plain text error aaya ho
+                    message = 'Server Error (' + xhr.status + '). Check Console for details.';
+
+                }
+
+                showToast(message, 'error');
+
+                input.css('border', '2px solid red');
+
+            },
+
+            complete: function () {
+
+                input.data('saving', false);
+
+            }
+
+        });
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | OBTAINED MARKS INPUT CHANGE
+    |--------------------------------------------------------------------------
+    */
+
+    $(document).on('change', '.obtained-marks-input', function () {
+
+        let input = $(this);
+
+        let wrapper = input.closest('.obtained-marks-wrapper');
+
+        let absentCheckbox = wrapper.find('.marks-absent-checkbox');
+
+        if (absentCheckbox.is(':checked')) {
+            return;
+        }
+
+        saveObtainedMarks(input);
+
+    });
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | MARKS ABSENT CHECKBOX CHANGE
+    |--------------------------------------------------------------------------
+    */
+
+    $(document).on('change', '.marks-absent-checkbox', function () {
+
+        let checkbox = $(this);
+
+        let wrapper = checkbox.closest('.obtained-marks-wrapper');
+
+        let input = wrapper.find('.obtained-marks-input');
+
+
+        if (checkbox.is(':checked')) {
+
+            /*
+            |--------------------------------------------------------------------------
+            | ABSENT = 0
+            |--------------------------------------------------------------------------
+            */
+
+            input.val(0);
+
+            input.prop('readonly', true);
+
+            saveObtainedMarks(input);
+
+        } else {
+
+            /*
+            |--------------------------------------------------------------------------
+            | PRESENT = EDITABLE
+            |--------------------------------------------------------------------------
+            */
+
+            input.val('');
+
+            input.prop('readonly', false);
+
+            input.css('border-color', '');
+
+            input.focus();
+
+        }
+
+    });
+
+});
 </script>

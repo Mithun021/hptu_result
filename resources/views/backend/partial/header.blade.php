@@ -36,6 +36,22 @@
                 width: 14px !important;
                 height: 14px !important;
             }
+
+            /* Hide Number Input Spinner Arrows */
+
+            /* Chrome, Safari, Edge, Opera */
+            input[type="number"]::-webkit-inner-spin-button,
+            input[type="number"]::-webkit-outer-spin-button {
+                -webkit-appearance: none;
+                margin: 0;
+            }
+
+            /* Firefox */
+            input[type="number"] {
+                -moz-appearance: textfield;
+                appearance: textfield;
+            }
+
         </style>
 
     </head>

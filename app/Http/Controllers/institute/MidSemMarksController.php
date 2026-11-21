@@ -251,7 +251,6 @@ class MidSemMarksController extends Controller
         ));
     }
 
-
     public function saveMarks(Request $request)
     {
         /* ================= VALIDATION ================= */
