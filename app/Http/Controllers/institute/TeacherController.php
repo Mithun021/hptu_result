@@ -117,4 +117,51 @@ class TeacherController extends Controller
         }
     }
 
+    public function profile()
+    {
+        $authUser = auth('institute')->user();
+
+        $instituteId = $authUser->account_type === 'institute'
+            ? auth('institute')->id()
+            : $authUser->institute_id;
+
+        $isInstitute = $authUser->account_type === 'institute';
+
+        $authUser->load('parentInstitute');
+
+        return view('institute.profile', compact(
+            'authUser',
+            'instituteId',
+            'isInstitute'
+        ));
+    }
+
+
+    public function changePassword(Request $request)
+    {
+        $request->validate([
+            'current_password' => ['required', 'current_password:institute'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ], [
+            'current_password.current_password' => 'Your current password is incorrect.',
+            'password.required' => 'Please enter your new password.',
+            'password.min' => 'New password must be at least 8 characters.',
+            'password.confirmed' => 'New password and confirm password do not match.',
+        ]);
+
+        $authUser = auth('institute')->user();
+
+        /*
+        * Institute model mein setPasswordAttribute() mutator
+        * password ko automatically bcrypt karta hai.
+        * Isliye yahan plain password assign karenge.
+        */
+        $authUser->password = $request->password;
+        $authUser->save();
+
+        return redirect()
+            ->route('institute.profile')
+            ->with('success', 'Password changed successfully.');
+    }
+
 }

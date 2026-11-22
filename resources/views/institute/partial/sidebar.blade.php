@@ -47,14 +47,14 @@
                             <li>
                                 <a href="#result" data-bs-toggle="collapse">
                                     <i data-feather="aperture"></i>
-                                    <span>Result </span>
+                                    <span>Result prepare</span>
                                     <span class="menu-arrow"></span>
                                 </a>
                                 <div class="collapse" id="result">
                                     <ul class="nav-second-level">
-                                        <li><a href="{{ route('marks.mid-sem') }}" class="tp-link">Prepare Internal Marks</a></li>
-                                        {{-- <li><a href="#" class="tp-link">Complete Internal Marks</a></li>
-                                        <li><a href="#" class="tp-link">External marks</a></li> --}}
+                                        <li><a href="{{ route('marks.mid-sem') }}" class="tp-link">Internal Marks</a></li>
+                                        {{-- <li><a href="#" class="tp-link">Complete Internal Marks</a></li> --}}
+                                        <li><a href="{{ route('external.marks.mid-sem-external') }}" class="tp-link">Practical External</a></li>
                                     </ul>
                                 </div>
                             </li>

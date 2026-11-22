@@ -30,6 +30,8 @@ Route::middleware(['institute.auth'])->prefix('institute')->group(function () {
     Route::post('mid-sem-marks/export',[MidSemMarksController::class,'export'])->name('mid-sem-marks.export');
 
     Route::resource('teachers', TeacherController::class);
+    Route::get('/profile', [TeacherController::class, 'profile']) ->name('institute.profile');
+    Route::post('/profile/change-password', [TeacherController::class, 'changePassword']) ->name('institute.profile.change-password');
 
     Route::get('teacher/assign-subject', [AssignSubjectController::class, 'assign_subject'])
         ->name('assign.subject');
@@ -55,6 +57,15 @@ Route::middleware(['institute.auth'])->prefix('institute')->group(function () {
         'delete_assign_subject'
     ])->name('delete.assign.subject');
 
+    // External Practical Marks ----------------------------
+    Route::name('external.')->group(function () {
+        Route::get('mid-sem-external-marks', [MidSemMarksController::class, 'midSemExternalIndex'])->name('marks.mid-sem-external');
+        Route::post('mid-sem-external-marks/render-result', [MidSemMarksController::class, 'renderExternalResult'])->name('mid-sem-marks.external.render-result');
+        Route::post('mid-sem-external-marks/save', [MidSemMarksController::class, 'saveExternalMarks'])->name('mid-sem-marks.external.save');
+        Route::post('mid-sem-external-marks/lock-unlock',[MidSemMarksController::class,'lockUnlockExternalMarks'])->name('mid-sem-marks.external.lock-unlock');
+        Route::post('mid-sem-external-marks/import',[MidSemMarksController::class,'importExternalMarks'])->name('mid-sem-external-marks.import');
+        Route::post('mid-sem-external-marks/export',[MidSemMarksController::class,'exportExternalMarks'])->name('mid-sem-external-marks.export');
+    });
 
     // Student Management ---------------------------------------
     Route::name('institute.')->group(function () {

@@ -130,6 +130,7 @@ Route::get('/institute/branches/{course_id}', [BranchController::class, 'getBran
 Route::get('/courses/{id}/details', [CourseController::class, 'getByCourse'])->name('courses.getByCourse');
 Route::get('/subjects/filter', [SubjectController::class, 'getSubjects']);
 Route::get('/institute/subjects/filter', [SubjectController::class, 'getSubjectsByInstitute'])->name('institute.subjects.filter');
+Route::get('/institute/subjects/practical/filter', [SubjectController::class, 'getPracticalSubjectsByInstitute'])->name('institute.practical-subjects.filter');
 Route::get('/result/subjects/filter', [SubjectController::class, 'getFilterSubjects'])->name('result.subjects.filter');
 Route::get('/result/subjects/theory-paper/filter', [SubjectController::class, 'getFilterTheoryPaperSubjects'])->name('result.subjects.theory-paper.filter');
 Route::get('/student/examination-form/verified-subjects', [SubjectController::class, 'getStudentExamFormVerifiedSubjects'])->name('student.examination-form.verified-subjects');

@@ -7,6 +7,8 @@ use App\Models\AnnualSemester;
 use App\Models\Batch;
 use App\Models\Branch;
 use App\Models\Course;
+use App\Models\EndSemMark;
+use App\Models\Exam;
 use App\Models\ExaminationForm;
 use App\Models\Institute;
 use App\Models\MidSemExam;
@@ -34,7 +36,6 @@ class MidSemMarksController extends Controller
         $mid_sem_exams = MidSemExam::where('status', 1)->latest()->get();
         return view('institute.mid-sem-marks.index',compact('courses','mid_sem_exams'));
     }
-
 
     public function renderResult(Request $request)
     {
@@ -749,7 +750,6 @@ class MidSemMarksController extends Controller
         ]);
     }
 
-
     // public function import(Request $request)
     // {
     //     $request->validate([
@@ -1257,7 +1257,6 @@ class MidSemMarksController extends Controller
         }
     }
 
-
     public function export(Request $request)
     {
         /**
@@ -1319,13 +1318,15 @@ class MidSemMarksController extends Controller
                 ->first()
             : null;
 
+        $exam_id = $exam->exam_id ?? null;
 
         /**
          * =========================
          * EXAMINATION FORM QUERY
          * =========================
          */
-        $examinationForms = ExaminationForm::where('exam_type', 'Regular')
+        $examinationForms = ExaminationForm::where('exam_id', $exam_id)
+            ->where('exam_type', 'Regular')
             ->where('course_id', $course_id)
             ->where('branch_id', $branch_id)
             ->where('batch_id', $batch_id)
@@ -1512,240 +1513,1147 @@ class MidSemMarksController extends Controller
         return new StreamedResponse($callback, 200, $headers);
     }
 
+    public function midSemExternalIndex(){
+        $user = auth('institute')->user();
+        $institute_id = $user->account_type === 'institute'
+                            ? $user->id
+                            : $user->institute_id;
+        $courses = Course::whereHas('institutes', function ($q) use ($institute_id) {
+            $q->where('institutes.id', $institute_id);
+        })->get();
+        $mid_sem_exams = MidSemExam::where('status', 1)->latest()->get();
+        return view('institute.mid-sem-marks.external-marks.index',compact('courses','mid_sem_exams'));
+    }
 
-    // public function export(Request $request)
-    // {
-    //     /**
-    //      * =========================
-    //      * INSTITUTE
-    //      * =========================
-    //      */
-    //     $authUser = auth('institute')->user();
+    public function renderExternalResult(Request $request)
+    {
+        /**
+         * =========================
+         * INSTITUTE
+         * =========================
+         */
+        $authUser = auth('institute')->user();
 
-    //     $institute_id = $authUser->account_type === 'institute'
-    //         ? $authUser->id
-    //         : $authUser->institute_id;
-
-
-    //     /**
-    //      * =========================
-    //      * FILTER INPUTS
-    //      * =========================
-    //      */
-    //     $course_type        = $request->course_type;
-    //     $course_id          = $request->course_id;
-    //     $scheme_id          = $request->scheme_id;
-    //     $branch_id          = $request->branch_id;
-    //     $semester_id        = $request->semester_id;
-    //     $annual_semester_id = $request->annual_semester_id;
-    //     $batch_id           = $request->batch_id;
-    //     $mid_sem_exam_id    = $request->mid_sem_exam_id;
-    //     $marks_type         = $request->marks_type;
-    //     $subject_id         = $request->subject_id;
+        $instituteId = $authUser->account_type === 'institute'
+            ? $authUser->id
+            : $authUser->institute_id;
 
 
-    //     /**
-    //      * =========================
-    //      * MASTER DATA
-    //      * =========================
-    //      */
-    //     $course    = Course::find($course_id);
-    //     $scheme    = Scheme::find($scheme_id);
-    //     $branch    = Branch::find($branch_id);
-    //     $semester  = Semester::find($semester_id);
-    //     $annual    = AnnualSemester::find($annual_semester_id);
-    //     $batch     = Batch::find($batch_id);
-    //     $exam      = MidSemExam::find($mid_sem_exam_id);
-    //     $institute = Institute::find($institute_id);
-    //     $subject   = Subject::find($subject_id);
+        /**
+         * =========================
+         * MID SEM EXAM -> EXAM ID
+         * =========================
+         */
+        $midSemExam = MidSemExam::findOrFail($request->mid_sem_exam_id);
+
+        $examId = $midSemExam->exam_id;
 
 
-    //     /**
-    //      * =========================
-    //      * EXAMINATION FORM QUERY
-    //      * =========================
-    //      * Only paid Regular examination forms
-    //      * and students who selected the requested subject.
-    //      */
-    //     $examinationForms = ExaminationForm::where('exam_type', 'Regular')
-    //         ->where('course_id', $course_id)
-    //         ->where('branch_id', $branch_id)
-    //         ->where('batch_id', $batch_id)
-    //         ->where('institute_id', $institute_id)
-    //         ->where('payment_status', 1)
-
-    //         ->when(
-    //             $scheme_id,
-    //             fn($q) => $q->where('scheme_id', $scheme_id)
-    //         )
-
-    //         ->when(
-    //             $course_type === 'Semester Based',
-    //             function ($q) use ($semester_id) {
-    //                 $q->where('semester_id', $semester_id);
-    //             },
-    //             function ($q) use ($annual_semester_id) {
-    //                 $q->where('annual_semester_id', $annual_semester_id);
-    //             }
-    //         )
-
-    //         // Student must have selected this subject
-    //         ->whereHas('choosedSubjects', function ($q) use ($subject_id) {
-    //             $q->where('subject_id', $subject_id);
-    //         });
+        /**
+         * =========================
+         * SUBJECT
+         * =========================
+         */
+        $subject = Subject::findOrFail($request->subject_id);
 
 
-    //     /**
-    //      * =========================
-    //      * ELIGIBLE STUDENT IDS
-    //      * =========================
-    //      */
-    //     $studentSubjects = $examinationForms
-    //         ->pluck('student_id')
-    //         ->unique()
-    //         ->values()
-    //         ->toArray();
+        /**
+         * =========================
+         * MAX MARKS LOGIC
+         * =========================
+         */
+        if ($request->course_type === 'Semester Based') {
+
+            // Semester Based External Marks
+            $maxMarks = $subject->external_marks ?? 0;
+
+        } else {
+
+            // Annual Based External Marks
+            $maxMarks = match ($request->marks_type) {
+                'External'   => $subject->external_marks ?? 0,
+                'Practical'  => $subject->mid_sem_marks3 ?? 0,
+                default      => 0
+            };
+
+        }
 
 
-    //     /**
-    //      * =========================
-    //      * STUDENTS
-    //      * =========================
-    //      * Only students having:
-    //      * 1. Paid Regular examination form
-    //      * 2. Selected requested subject
-    //      */
-    //     $students = Student::whereIn('id', $studentSubjects)
-    //         ->where('course_type', $course_type)
-    //         ->where('course_id', $course_id)
-    //         ->where('branch_id', $branch_id)
-    //         ->where('institute_id', $institute_id)
-    //         ->where('batch_id', $batch_id)
+        /**
+         * =========================
+         * EXAMINATION FORM QUERY
+         * =========================
+         * Only paid examination forms
+         * and students who selected
+         * the requested subject.
+         */
+        $examinationForms = ExaminationForm::where('exam_type', 'Regular')
+            ->where('course_id', $request->course_id)
+            ->where('branch_id', $request->branch_id)
+            ->where('batch_id', $request->batch_id)
+            ->where('institute_id', $instituteId)
+            ->where('payment_status', 1)
 
-    //         ->when(
-    //             $scheme_id,
-    //             fn($q) => $q->where('scheme_id', $scheme_id)
-    //         )
+            ->when(
+                $request->scheme_id,
+                fn($q) => $q->where('scheme_id', $request->scheme_id)
+            )
 
-    //         ->when(
-    //             $course_type === 'Semester Based',
-    //             fn($q) => $q->where('semester_id', $semester_id),
-    //             fn($q) => $q->where('annual_semester_id', $annual_semester_id)
-    //         )
+            ->when(
+                $request->course_type === 'Semester Based',
+                function ($q) use ($request) {
+                    $q->where('semester_id', $request->semester_id);
+                },
+                function ($q) use ($request) {
+                    $q->where('annual_semester_id', $request->annual_semester_id);
+                }
+            )
 
-    //         ->orderByRaw("
-    //             CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(university_roll_no, '-', 2), '-', -1) AS UNSIGNED) ASC,
-    //             CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(university_roll_no, '-', 4), '-', -1) AS UNSIGNED) ASC
-    //         ")
-    //         ->get();
-
-
-    //     /**
-    //      * =========================
-    //      * CSV FILE NAME
-    //      * =========================
-    //      */
-    //     $fileName = "mid_sem_marks_sample_" . time() . ".csv";
+            // Student must have selected this subject
+            ->whereHas('choosedSubjects', function ($q) use ($request) {
+                $q->where('subject_id', $request->subject_id);
+            });
 
 
-    //     /**
-    //      * =========================
-    //      * CSV HEADERS
-    //      * =========================
-    //      */
-    //     $headers = [
-    //         "Content-type"        => "text/csv",
-    //         "Content-Disposition" => "attachment; filename=$fileName",
-    //         "Pragma"              => "no-cache",
-    //         "Cache-Control"       => "must-revalidate, post-check=0, pre-check=0",
-    //         "Expires"             => "0"
-    //     ];
+        /**
+         * =========================
+         * ELIGIBLE STUDENT IDS
+         * =========================
+         */
+        $studentSubjects = $examinationForms
+            ->pluck('student_id')
+            ->unique()
+            ->values()
+            ->toArray();
 
 
-    //     /**
-    //      * =========================
-    //      * CSV COLUMNS
-    //      * =========================
-    //      */
-    //     $columns = [
-    //         'id',
-    //         'university_roll_no',
-    //         'student_name',
-    //         'internal_exam_name',
-    //         'course_type',
-    //         'course_name',
-    //         'scheme_name',
-    //         'branch_name',
-    //         'semester_name',
-    //         // 'annual_semester_name',
-    //         'batch_name',
-    //         'institute_name',
-    //         'marks_type',
-    //         'subject_name',
-    //         'subject_code',
-    //         'max_marks',
-    //         'obtained_marks',
-    //         'exam_status'
-    //     ];
+        /**
+         * =========================
+         * STUDENTS
+         * =========================
+         */
+        $students = Student::with([
+                'course',
+                'branch',
+                'semester',
+                'annual_semester',
+                'scheme',
+                'batch',
+                'institute'
+            ])
+            ->whereIn('id', $studentSubjects)
+            ->where('course_type', $request->course_type)
+            ->where('course_id', $request->course_id)
+            ->where('branch_id', $request->branch_id)
+            ->where('institute_id', $instituteId)
+            ->where('batch_id', $request->batch_id)
+
+            ->when(
+                $request->scheme_id,
+                fn($q) => $q->where('scheme_id', $request->scheme_id)
+            )
+
+            ->when(
+                $request->course_type === 'Semester Based',
+                fn($q) => $q->where('semester_id', $request->semester_id),
+                fn($q) => $q->where('annual_semester_id', $request->annual_semester_id)
+            )
+
+            ->orderByRaw("
+                CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(university_roll_no, '-', 2), '-', -1) AS UNSIGNED) ASC,
+                CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(university_roll_no, '-', 4), '-', -1) AS UNSIGNED) ASC
+            ")
+            ->get();
 
 
-    //     /**
-    //      * =========================
-    //      * CSV CALLBACK
-    //      * =========================
-    //      */
-    //     $callback = function () use (
-    //         $students,
-    //         $columns,
-    //         $course,
-    //         $scheme,
-    //         $branch,
-    //         $semester,
-    //         $annual,
-    //         $batch,
-    //         $institute,
-    //         $subject,
-    //         $exam,
-    //         $marks_type
-    //     ) {
+        /**
+         * =========================
+         * EXTERNAL MARKS QUERY
+         * =========================
+         */
+        $marksQuery = EndSemMark::where([
+            'exam_id'      => $examId,
+            'subject_id'   => $request->subject_id,
+            'institute_id' => $instituteId,
+            'course_type'  => $request->course_type,
+            'course_id'    => $request->course_id,
+            'branch_id'    => $request->branch_id,
+            'batch_id'     => $request->batch_id,
+            'marks_type'   => $request->marks_type,
+        ]);
 
-    //         $file = fopen('php://output', 'w');
+        if ($request->scheme_id) {
+            $marksQuery->where('scheme_id', $request->scheme_id);
+        }
 
-    //         // CSV Header
-    //         fputcsv($file, $columns);
+        if ($request->course_type === 'Semester Based') {
 
-    //         foreach ($students as $key => $student) {
+            $marksQuery->where('semester_id', $request->semester_id)
+                ->whereNull('annual_semester_id');
 
-    //             $row = [
-    //                 $key + 1,
-    //                 $student->university_roll_no,
-    //                 $student->student_name,
-    //                 $exam->mid_sem_exam_name ?? '',
-    //                 $student->course_type,
-    //                 $course->name ?? '',
-    //                 $scheme->name ?? '',
-    //                 $branch->name ?? '',
-    //                 $semester->name ?? '',
-    //                 // $annual->name ?? '',
-    //                 $batch->name ?? '',
-    //                 $institute->name ?? '',
-    //                 $marks_type,
-    //                 $subject->name ?? '',
-    //                 $subject->subject_code ?? '',
-    //                 '', // max_marks
-    //                 '', // obtained_marks
-    //                 'present'
-    //             ];
+        } else {
 
-    //             fputcsv($file, $row);
-    //         }
+            $marksQuery->where('annual_semester_id', $request->annual_semester_id)
+                ->whereNull('semester_id');
 
-    //         fclose($file);
-    //     };
+        }
+
+        $allMarks = $marksQuery->get()->keyBy('student_id');
 
 
-    //     return new StreamedResponse($callback, 200, $headers);
-    // }
+        /**
+         * =========================
+         * COMMON DATA
+         * =========================
+         */
+        $exam = Exam::find($examId);
 
+        $batch = Batch::find($request->batch_id);
+
+        $semester = null;
+        $annualSemester = null;
+
+        if ($request->course_type === 'Semester Based') {
+
+            $semester = Semester::find($request->semester_id);
+
+        } else {
+
+            $annualSemester = AnnualSemester::find($request->annual_semester_id);
+
+        }
+
+        $institute = Institute::find($instituteId);
+
+
+        /**
+         * =========================
+         * RESULT VIEW
+         * =========================
+         */
+        return view('institute.mid-sem-marks.external-marks.result', compact(
+            'students',
+            'allMarks',
+            'maxMarks',
+            'subject',
+            'exam',
+            'batch',
+            'semester',
+            'annualSemester',
+            'instituteId',
+            'institute',
+            'studentSubjects'
+        ));
+    }
+
+    public function saveExternalMarks(Request $request)
+    {
+
+        /* ================= VALIDATION ================= */
+
+        $studentId = $request->student_id;
+        $mid_sem_exam_id = $request->mid_sem_exam_id;
+
+        $authUser = auth('institute')->user();
+
+        $instituteId = $authUser->account_type === 'institute'
+            ? auth('institute')->id()
+            : $authUser->institute_id;
+
+
+        /**
+         * =========================
+         * MID SEM EXAM -> EXAM ID
+         * =========================
+         */
+        $exam_id = MidSemExam::findOrFail($mid_sem_exam_id)->exam_id;
+
+
+        /**
+         * =========================
+         * SUBJECT
+         * =========================
+         */
+        $subject = Subject::findOrFail($request->subject_id);
+
+
+        /**
+         * =========================
+         * MAX MARKS
+         * =========================
+         */
+        if ($request->course_type === 'Semester Based') {
+
+            $maxMarks = $subject->external_marks ?? 0;
+
+        } else {
+
+            $maxMarks = match ($request->marks_type) {
+                'External'  => $subject->external_marks ?? 0,
+                'Practical' => $subject->mid_sem_marks3 ?? 0,
+                default     => 0
+            };
+
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Record Check
+        |--------------------------------------------------------------------------
+        */
+
+        $marksQuery = EndSemMark::where([
+            'exam_id'      => $exam_id,
+            'student_id'   => $studentId,
+            'subject_id'   => $request->subject_id,
+            'institute_id' => $instituteId,
+            'course_type'  => $request->course_type,
+            'course_id'    => $request->course_id,
+            'scheme_id'    => $request->scheme_id,
+            'branch_id'    => $request->branch_id,
+            'batch_id'     => $request->batch_id,
+            'marks_type'   => $request->marks_type,
+        ]);
+
+        if ($request->course_type === 'Semester Based') {
+
+            $marksQuery->where('semester_id', $request->semester_id)
+                ->whereNull('annual_semester_id');
+
+        } else {
+
+            $marksQuery->where('annual_semester_id', $request->annual_semester_id)
+                ->whereNull('semester_id');
+
+        }
+
+        $record = $marksQuery->first();
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Data Prepare
+        |--------------------------------------------------------------------------
+        */
+
+        $data = [
+            'exam_id'            => $exam_id,
+            'student_id'         => $studentId,
+            'subject_id'         => $request->subject_id,
+            'institute_id'       => $instituteId,
+            'course_type'         => $request->course_type,
+            'course_id'           => $request->course_id,
+            'branch_id'           => $request->branch_id,
+            'batch_id'            => $request->batch_id,
+            'scheme_id'           => $request->scheme_id,
+
+            'semester_id'         => $request->course_type === 'Semester Based'
+                                        ? $request->semester_id
+                                        : null,
+
+            'annual_semester_id'  => $request->course_type === 'Annual Based'
+                                        ? $request->annual_semester_id
+                                        : null,
+
+            'marks_type'          => $request->marks_type,
+            'max_marks'           => $maxMarks,
+
+            'obtained_marks'      => $request->exam_status === 'absent'
+                                        ? 0
+                                        : min((float) $request->marks, $maxMarks),
+
+            'exam_status'         => $request->exam_status ?? 'present',
+
+            'upload_by'           => $instituteId,
+        ];
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Save / Update
+        |--------------------------------------------------------------------------
+        */
+
+        if ($record) {
+            $record->update($data);
+        } else {
+            $record = EndSemMark::create($data);
+        }
+
+
+        return response()->json([
+            'status' => true,
+            'id' => $record->id
+        ]);
+    }
+
+    public function lockUnlockExternalMarks(Request $request)
+    {
+        $request->validate([
+            'ids'    => 'required|array',
+            'action' => 'required|in:lock,unlock,forward'
+        ]);
+
+        $instituteUser = auth('institute')->user();
+
+        $instituteId = $instituteUser->account_type === 'institute'
+            ? auth('institute')->id()
+            : $instituteUser->institute_id;
+
+
+        // Get External Marks records
+        $records = EndSemMark::whereIn('id', $request->ids)->get();
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | FORWARD CHECK
+        |--------------------------------------------------------------------------
+        | Non-institute users cannot modify forwarded records
+        |--------------------------------------------------------------------------
+        */
+
+        if ($instituteUser->account_type !== 'institute') {
+
+            $forwardedExists = $records->where('university_forword', 1)->count();
+
+            if ($forwardedExists > 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Some selected records are already forwarded.'
+                ]);
+            }
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | EXTRA SECURITY FOR FORWARD
+        |--------------------------------------------------------------------------
+        */
+
+        if ($request->action === 'forward') {
+
+            // Check unlocked records
+            $unlockedExists = $records->where('is_locked', 0)->count();
+
+            if ($unlockedExists > 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Please lock all selected students marks before forwarding.'
+                ]);
+            }
+        }
+
+
+        foreach ($records as $record) {
+
+            /*
+            |--------------------------------------------------------------------------
+            | LOCK
+            |--------------------------------------------------------------------------
+            */
+
+            if ($request->action === 'lock') {
+                $record->is_locked = 1;
+            }
+
+
+            /*
+            |--------------------------------------------------------------------------
+            | UNLOCK
+            |--------------------------------------------------------------------------
+            | Institute can unlock forwarded records
+            | and remove forward status.
+            |--------------------------------------------------------------------------
+            */
+
+            if ($request->action === 'unlock') {
+
+                $record->is_locked = 0;
+
+                if (
+                    $instituteUser->account_type === 'institute' &&
+                    $record->university_forword == 1
+                ) {
+                    $record->university_forword = 0;
+                }
+            }
+
+
+            /*
+            |--------------------------------------------------------------------------
+            | FORWARD
+            |--------------------------------------------------------------------------
+            */
+
+            if ($request->action === 'forward') {
+
+                $record->university_forword = 1;
+                $record->is_locked = 1; // force lock
+
+            }
+
+            $record->save();
+        }
+
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Updated Successfully'
+        ]);
+    }
+
+    public function importExternalMarks(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:csv,txt|max:4096',
+        ]);
+
+        DB::beginTransaction();
+
+        try {
+            $file = fopen($request->file('file')->getRealPath(), 'r');
+
+            $headers = fgetcsv($file);
+
+            if (!$headers) {
+                fclose($file);
+                return response()->json([
+                    'status' => false,
+                    'message' => 'CSV file is empty.',
+                ], 422);
+            }
+
+            $headers = array_map(
+                fn($header) => strtolower(trim($header)),
+                $headers
+            );
+
+            $requiredHeaders = [
+                'university_roll_no',
+                'external_exam_name',
+                'course_type',
+                'course_name',
+                'branch_name',
+                'batch_name',
+                'institute_name',
+                'marks_type',
+                'subject_name',
+                'subject_code',
+                'max_marks',
+                'obtained_marks',
+                'exam_status',
+            ];
+
+            foreach ($requiredHeaders as $header) {
+                if (!in_array($header, $headers)) {
+                    fclose($file);
+
+                    return response()->json([
+                        'status' => false,
+                        'message' => "Required CSV column missing: {$header}",
+                    ], 422);
+                }
+            }
+
+            $inserted = 0;
+            $skipped = 0;
+
+            while (($rowData = fgetcsv($file)) !== false) {
+
+                if (count($rowData) !== count($headers)) {
+                    $skipped++;
+                    continue;
+                }
+
+                $row = array_combine($headers, $rowData);
+
+                $rollNumber = trim($row['university_roll_no']);
+                $courseType = strtolower(trim($row['course_type']));
+                $marksType = trim($row['marks_type']);
+                $examName = trim($row['external_exam_name']);
+
+                /*
+                * =========================
+                * COURSE
+                * =========================
+                */
+                $course = Course::where('name', trim($row['course_name']))
+                    ->first();
+
+                if (!$course) {
+                    $skipped++;
+                    continue;
+                }
+
+                /*
+                * =========================
+                * BRANCH
+                * =========================
+                */
+                $branch = Branch::where('course_id', $course->id)
+                    ->where('name', trim($row['branch_name']))
+                    ->first();
+
+                if (!$branch) {
+                    $skipped++;
+                    continue;
+                }
+
+                /*
+                * =========================
+                * BATCH
+                * =========================
+                */
+                $batch = Batch::where('name', trim($row['batch_name']))
+                    ->first();
+
+                if (!$batch) {
+                    $skipped++;
+                    continue;
+                }
+
+                /*
+                * =========================
+                * INSTITUTE
+                * =========================
+                */
+                $institute = Institute::where('name', trim($row['institute_name']))
+                    ->first();
+
+                if (!$institute) {
+                    $skipped++;
+                    continue;
+                }
+
+                /*
+                * =========================
+                * SCHEME
+                * =========================
+                */
+                $scheme = null;
+
+                if (!empty($row['scheme_name'])) {
+                    $scheme = Scheme::where('name', trim($row['scheme_name']))
+                        ->first();
+
+                    if (!$scheme) {
+                        $skipped++;
+                        continue;
+                    }
+                }
+
+                /*
+                * =========================
+                * SEMESTER
+                * =========================
+                */
+                $semester = null;
+
+                if (!empty($row['semester_name'])) {
+                    $semester = Semester::where('name', trim($row['semester_name']))
+                        ->first();
+
+                    if (!$semester) {
+                        $skipped++;
+                        continue;
+                    }
+                }
+
+                /*
+                * =========================
+                * STUDENT
+                * =========================
+                */
+                $studentQuery = Student::where(
+                    'university_roll_no',
+                    $rollNumber
+                )
+                    ->where('course_type', ucwords($courseType))
+                    ->where('course_id', $course->id)
+                    ->where('branch_id', $branch->id)
+                    ->where('batch_id', $batch->id)
+                    ->where('institute_id', $institute->id);
+
+                if ($scheme) {
+                    $studentQuery->where('scheme_id', $scheme->id);
+                }
+
+                $student = $studentQuery->first();
+
+                if (!$student) {
+                    $skipped++;
+                    continue;
+                }
+
+                /*
+                * =========================
+                * MID SEM EXAM
+                * =========================
+                * CSV exam name se MidSemExam find karo.
+                * Uske through actual Exam ID nikalo.
+                */
+                $midSemExam = MidSemExam::where(
+                    'mid_sem_exam_name',
+                    $examName
+                )
+                    ->where('status', 1)
+                    ->where('course_type', ucwords($courseType))
+                    ->first();
+
+                if (!$midSemExam) {
+                    $skipped++;
+                    continue;
+                }
+
+                $examId = $midSemExam->exam_id;
+
+                /*
+                * =========================
+                * SUBJECT
+                * =========================
+                */
+                $subjectQuery = Subject::where(
+                    'subject_code',
+                    trim($row['subject_code'])
+                )
+                    ->where('name', trim($row['subject_name']))
+                    ->where('course_type', ucwords($courseType))
+                    ->where('course_id', $course->id)
+                    ->where('branch_id', $branch->id);
+
+                if ($semester) {
+                    $subjectQuery->where('semester_id', $semester->id);
+                }
+
+                if ($scheme) {
+                    $subjectQuery->where('scheme_id', $scheme->id);
+                }
+
+                $subject = $subjectQuery->first();
+
+                if (!$subject) {
+                    $skipped++;
+                    continue;
+                }
+
+                /*
+                * =========================
+                * ANNUAL SEMESTER
+                * =========================
+                */
+                $annualSemesterId = null;
+
+                if ($courseType === 'annual based') {
+                    $annualSemesterId = $student->annual_semester_id;
+                }
+
+                /*
+                * =========================
+                * EXAMINATION FORM CHECK
+                * =========================
+                * Same exam_id, student and selected subject
+                * must exist in paid Regular Examination Form.
+                */
+                $examinationFormQuery = ExaminationForm::where(
+                    'exam_id',
+                    $examId
+                )
+                    ->where('exam_type', 'Regular')
+                    ->where('student_id', $student->id)
+                    ->where('course_id', $course->id)
+                    ->where('branch_id', $branch->id)
+                    ->where('batch_id', $batch->id)
+                    ->where('institute_id', $institute->id)
+                    ->where('payment_status', 1)
+                    ->whereHas('choosedSubjects', function ($q) use ($subject) {
+                        $q->where('subject_id', $subject->id);
+                    });
+
+                if ($scheme) {
+                    $examinationFormQuery->where('scheme_id', $scheme->id);
+                }
+
+                if ($courseType === 'semester based') {
+                    $examinationFormQuery->where(
+                        'semester_id',
+                        $semester?->id
+                    );
+                }
+
+                $examinationForm = $examinationFormQuery->first();
+
+                if (!$examinationForm) {
+                    $skipped++;
+                    continue;
+                }
+
+                /*
+                * =========================
+                * MAX MARKS
+                * =========================
+                */
+                $maxMarks = 0;
+
+                if ($courseType === 'semester based') {
+                    $maxMarks = $subject->external_marks ?? 0;
+                } else {
+                    $maxMarks = match ($marksType) {
+                        'External' => $subject->external_marks ?? 0,
+                        'Practical' => $subject->mid_sem_marks3 ?? 0,
+                        default => 0,
+                    };
+                }
+
+                $examStatus = strtolower(trim($row['exam_status'] ?? 'present'));
+
+                $obtainedMarks = $examStatus === 'absent'
+                    ? 0
+                    : (float) ($row['obtained_marks'] ?? 0);
+
+                /*
+                * =========================
+                * DUPLICATE CHECK
+                * =========================
+                */
+                $duplicateQuery = EndSemMark::where('exam_id', $examId)
+                    ->where('student_id', $student->id)
+                    ->where('subject_id', $subject->id)
+                    ->where('institute_id', $institute->id)
+                    ->where('course_type', ucwords($courseType))
+                    ->where('course_id', $course->id)
+                    ->where('branch_id', $branch->id)
+                    ->where('batch_id', $batch->id)
+                    ->where('marks_type', $marksType);
+
+                if ($scheme) {
+                    $duplicateQuery->where('scheme_id', $scheme->id);
+                } else {
+                    $duplicateQuery->whereNull('scheme_id');
+                }
+
+                if ($courseType === 'semester based') {
+                    $duplicateQuery->where('semester_id', $semester?->id)
+                        ->whereNull('annual_semester_id');
+                } else {
+                    $duplicateQuery->whereNull('semester_id')
+                        ->where('annual_semester_id', $annualSemesterId);
+                }
+
+                if ($duplicateQuery->exists()) {
+                    $skipped++;
+                    continue;
+                }
+
+                /*
+                * =========================
+                * INSERT EXTERNAL MARKS
+                * =========================
+                */
+                EndSemMark::create([
+                    'exam_id' => $examId,
+                    'student_id' => $student->id,
+                    'subject_id' => $subject->id,
+                    'institute_id' => $institute->id,
+                    'course_type' => ucwords($courseType),
+                    'course_id' => $course->id,
+                    'branch_id' => $branch->id,
+                    'batch_id' => $batch->id,
+                    'semester_id' => $courseType === 'semester based'
+                        ? $semester?->id
+                        : null,
+                    'annual_semester_id' => $courseType === 'annual based'
+                        ? $annualSemesterId
+                        : null,
+                    'scheme_id' => $scheme?->id,
+                    'marks_type' => $marksType,
+                    'max_marks' => $maxMarks,
+                    'obtained_marks' => min($obtainedMarks, $maxMarks),
+                    'grace_marks' => 0,
+                    'exam_status' => $examStatus,
+                    'is_locked' => 0,
+                    'university_forword' => 0,
+                ]);
+
+                $inserted++;
+            }
+
+            fclose($file);
+
+            DB::commit();
+
+            return redirect()
+                ->route('external.marks.mid-sem-external')
+                ->with(
+                    'success',
+                    "Inserted: {$inserted} | Skipped (Already/Invalid): {$skipped}"
+                );
+
+        } catch (\Throwable $e) {
+
+            DB::rollBack();
+
+            return redirect()
+                ->route('external.marks.mid-sem-external')
+                ->with('error', 'Import failed: ' . $e->getMessage());
+        }
+    }
+
+    public function exportExternalMarks(Request $request)
+    {
+        /**
+         * =========================
+         * INSTITUTE
+         * =========================
+         */
+        $authUser = auth('institute')->user();
+
+        $institute_id = $authUser->account_type === 'institute'
+            ? $authUser->id
+            : $authUser->institute_id;
+
+
+        /**
+         * =========================
+         * FILTER INPUTS
+         * =========================
+         */
+        $course_type        = $request->course_type;
+        $course_id          = $request->course_id;
+        $scheme_id          = $request->scheme_id;
+        $branch_id          = $request->branch_id;
+        $semester_id        = $request->semester_id;
+        $annual_semester_id = $request->annual_semester_id;
+        $batch_id           = $request->batch_id;
+        $mid_sem_exam_id    = $request->mid_sem_exam_id;
+        $marks_type         = $request->marks_type;
+        $subject_id         = $request->subject_id;
+
+
+        /**
+         * =========================
+         * MASTER DATA
+         * =========================
+         */
+        $course    = Course::find($course_id);
+        $scheme    = Scheme::find($scheme_id);
+        $branch    = Branch::find($branch_id);
+        $semester  = Semester::find($semester_id);
+        $annual    = AnnualSemester::find($annual_semester_id);
+        $batch     = Batch::find($batch_id);
+        $exam      = MidSemExam::find($mid_sem_exam_id);
+        $institute = Institute::find($institute_id);
+        $subject   = Subject::find($subject_id);
+
+
+        /**
+         * =========================
+         * EXAM DETAILS
+         * =========================
+         * mid_sem_exams.exam_id
+         *       ↓
+         * exams.id
+         */
+        $examId = $exam->exam_id ?? null;
+
+        $examDetails = $examId
+            ? DB::table('exams')->where('id', $examId)->first()
+            : null;
+
+
+        /**
+         * =========================
+         * EXAMINATION FORM QUERY
+         * =========================
+         */
+        $examinationForms = ExaminationForm::where('exam_id', $examId)
+            ->where('exam_type', 'Regular')
+            ->where('course_id', $course_id)
+            ->where('branch_id', $branch_id)
+            ->where('batch_id', $batch_id)
+            ->where('institute_id', $institute_id)
+            ->where('payment_status', 1)
+
+            ->when(
+                $scheme_id,
+                fn($q) => $q->where('scheme_id', $scheme_id)
+            )
+
+            ->when(
+                $course_type === 'Semester Based',
+                function ($q) use ($semester_id) {
+                    $q->where('semester_id', $semester_id);
+                },
+                function ($q) use ($annual_semester_id) {
+                    $q->where('annual_semester_id', $annual_semester_id);
+                }
+            )
+
+            ->whereHas('choosedSubjects', function ($q) use ($subject_id) {
+                $q->where('subject_id', $subject_id);
+            });
+
+
+        /**
+         * =========================
+         * ELIGIBLE STUDENT IDS
+         * =========================
+         */
+        $studentSubjects = $examinationForms
+            ->pluck('student_id')
+            ->unique()
+            ->values()
+            ->toArray();
+
+
+        /**
+         * =========================
+         * STUDENTS
+         * =========================
+         */
+        $students = Student::whereIn('id', $studentSubjects)
+            ->where('course_type', $course_type)
+            ->where('course_id', $course_id)
+            ->where('branch_id', $branch_id)
+            ->where('institute_id', $institute_id)
+            ->where('batch_id', $batch_id)
+
+            ->when(
+                $scheme_id,
+                fn($q) => $q->where('scheme_id', $scheme_id)
+            )
+
+            ->when(
+                $course_type === 'Semester Based',
+                fn($q) => $q->where('semester_id', $semester_id),
+                fn($q) => $q->where('annual_semester_id', $annual_semester_id)
+            )
+
+            ->orderByRaw("
+                CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(university_roll_no, '-', 2), '-', -1) AS UNSIGNED) ASC,
+                CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(university_roll_no, '-', 4), '-', -1) AS UNSIGNED) ASC
+            ")
+            ->get();
+
+
+        /**
+         * =========================
+         * CSV FILE NAME
+         * =========================
+         */
+        $subjectCode = $subject->subject_code ?? 'Subject';
+
+        $examMonth = $examDetails->exam_month ?? '';
+        $examYear  = $examDetails->exam_year ?? '';
+
+        $fileName = 'External_Marks_' .
+            $subjectCode . '_' .
+            $examMonth . '_' .
+            $examYear . '.csv';
+
+        // Remove unwanted filename characters
+        $fileName = preg_replace('/[^A-Za-z0-9_.-]/', '_', $fileName);
+
+
+        /**
+         * =========================
+         * CSV HEADERS
+         * =========================
+         */
+        $headers = [
+            "Content-type"        => "text/csv",
+            "Content-Disposition" => "attachment; filename=\"$fileName\"",
+            "Pragma"              => "no-cache",
+            "Cache-Control"       => "must-revalidate, post-check=0, pre-check=0",
+            "Expires"             => "0"
+        ];
+
+
+        /**
+         * =========================
+         * CSV COLUMNS
+         * =========================
+         */
+        $columns = [
+            'id',
+            'university_roll_no',
+            'student_name',
+            'external_exam_name',
+            'course_type',
+            'course_name',
+            'scheme_name',
+            'branch_name',
+            'semester_name',
+            // 'annual_semester_name',
+            'batch_name',
+            'institute_name',
+            'marks_type',
+            'subject_name',
+            'subject_code',
+            'max_marks',
+            'obtained_marks',
+            'exam_status'
+        ];
+
+
+        /**
+         * =========================
+         * CSV CALLBACK
+         * =========================
+         */
+        $callback = function () use (
+            $students,
+            $columns,
+            $course,
+            $scheme,
+            $branch,
+            $semester,
+            $annual,
+            $batch,
+            $institute,
+            $subject,
+            $exam,
+            $marks_type
+        ) {
+
+            $file = fopen('php://output', 'w');
+
+            // CSV Header
+            fputcsv($file, $columns);
+
+            foreach ($students as $key => $student) {
+
+                $row = [
+                    $key + 1,
+                    $student->university_roll_no,
+                    $student->student_name,
+                    $exam->mid_sem_exam_name ?? '',
+                    $student->course_type,
+                    $course->name ?? '',
+                    $scheme->name ?? '',
+                    $branch->name ?? '',
+                    $semester->name ?? '',
+                    // $annual->name ?? '',
+                    $batch->name ?? '',
+                    $institute->name ?? '',
+                    $marks_type,
+                    $subject->name ?? '',
+                    $subject->subject_code ?? '',
+                    '', // max_marks
+                    '', // obtained_marks
+                    'present'
+                ];
+
+                fputcsv($file, $row);
+            }
+
+            fclose($file);
+        };
+
+
+        return new StreamedResponse($callback, 200, $headers);
+    }
 
 }

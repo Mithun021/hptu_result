@@ -38,10 +38,12 @@ class EndSemMark extends Model
         'retotalling_upload_by',
         'retotalling_marks_locked',
         'is_locked',
+        'university_forword',
     ];
 
     protected $casts = [
         'is_locked' => 'boolean',
+        'university_forword' => 'boolean',
     ];
 
     /*
