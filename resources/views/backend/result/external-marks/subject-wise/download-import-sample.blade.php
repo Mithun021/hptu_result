@@ -9,7 +9,7 @@
         <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
     </div>
     <div class="offcanvas-body card">
-        <form id="exportIndividualExternalMarksForm"> 
+        <form id="exportIndividualExternalMarksForm">
         <div class="row">
             <div class="col-md-2 form-group mb-2">
                 <label for="export_exam_id">Exam Name<span class="text-danger">*</span></label>
@@ -20,12 +20,12 @@
                     @endforeach
                 </select>
             </div>
-            <div class="col-md-2 form-group mb-2">
+            <div class="col-md-2 form-group mb-2 d-none">
                 <label for="export_course_type">Course Type<span class="text-danger">*</span></label>
                 <select name="export_course_type" id="export_course_type" class="form-control">
                     <option value="">--Select--</option>
-                    <option value="Annual Based">Annual Based</option>
-                    <option value="Semester Based">Semester Based</option>
+                    {{-- <option value="Annual Based">Annual Based</option> --}}
+                    <option value="Semester Based" selected>Semester Based</option>
                 </select>
                 @error('export_course_type') <small class="text-danger">{{ $message }}</small> @enderror
             </div>
@@ -100,7 +100,7 @@
         <hr>
 
         <form action="{{ route('results.external-marks.import') }}" method="post" enctype="multipart/form-data">
-        @csrf    
+        @csrf
         <div class="row">
             <div class="col-12">
                 <h4 class="text-center">Import/Upload External Marks</h4>

@@ -181,7 +181,7 @@ $(document).ready(function () {
 
     /*
     =====================================================
-    SAVE MARKS
+    SAVE OBTAINED MARKS
     =====================================================
     */
 
@@ -191,51 +191,77 @@ $(document).ready(function () {
 
         const studentId = input.data("student");
         const subjectId = input.data("subject");
-
         const marks = input.val();
-
         const cell = input.closest("td");
 
-        const absentCheckbox = cell.find(".mark-absent");
+        if (marks === '') return;
 
-        const status = absentCheckbox.is(":checked")
-            ? "absent"
-            : "present";
+        const selectedStatus = cell.find(".mark-status:checked").val();
+
+        // OB => null status
+        const status = selectedStatus === undefined || selectedStatus === ''
+            ? null
+            : selectedStatus;
 
         saveExternalMarks(studentId, subjectId, marks, status, input);
-
     });
 
 
     /*
     =====================================================
-    ABSENT CHECKBOX
+    RADIO STATUS (OB / AB / UMC / I/F)
     =====================================================
     */
 
-    $(document).on("change", ".mark-absent", function () {
+    $(document).on("change", ".mark-status", function () {
 
-        const checkbox = $(this);
+        const radio = $(this);
 
-        const studentId = checkbox.data("student");
-        const subjectId = checkbox.data("subject");
+        const studentId = radio.data("student");
+        const subjectId = radio.data("subject");
+        const status = radio.val();
 
-        const cell  = checkbox.closest("td");
+        const cell = radio.closest("td");
         const input = cell.find(".save-marks");
 
-        let marks = input.val();
+        const maxMarks = input.data("max");
 
-        const status = checkbox.is(":checked")
-            ? "absent"
-            : "present";
+        if (status === "absent") {
 
-        if(status === "absent"){
-
+            // AB
             input.val(0);
-            marks = 0;
-        }
+            input.prop("readonly", true);
 
-        saveExternalMarks(studentId, subjectId, marks, status, input);
+            saveExternalMarks(
+                studentId,
+                subjectId,
+                0,
+                "absent",
+                input
+            );
+
+        } else {
+
+            // OB / UMC / I/F -> Editable
+            input.prop("readonly", false);
+
+            let marks = input.val() === ''
+                ? 0
+                : input.val();
+
+            // OB value empty => NULL
+            let saveStatus = status === ''
+                ? null
+                : status;
+
+            saveExternalMarks(
+                studentId,
+                subjectId,
+                marks,
+                saveStatus,
+                input
+            );
+        }
 
     });
 
@@ -761,8 +787,8 @@ $(document).ready(function () {
         });
 
     });
-    
-    
+
+
     // ----------------------------------------------------------------
         // Annual Moderation marks ---------------------------------
     // ----------------------------------------------------------------
@@ -1031,8 +1057,6 @@ $(document).ready(function () {
         });
 
     });
-    
-    
 
 });
 </script>

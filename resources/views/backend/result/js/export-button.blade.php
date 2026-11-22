@@ -238,7 +238,146 @@ $("#print-btn").click(function () {
 </script>
 
 
+<script>
+$("#extenal-marks-print-btn").click(function () {
 
+    var content = $(".result-table").prop('outerHTML');
+
+    var printWindow = window.open('', '', 'width=1600,height=1000');
+
+    printWindow.document.write(`
+        <html>
+        <head>
+            <title>External Marks Result</title>
+
+            <style>
+
+                @page {
+                    size: A3 landscape;
+                    margin: 8mm;
+                }
+
+                body {
+                    font-family: Arial, sans-serif;
+                    margin: 0;
+                    padding: 0;
+                    background: #fff;
+                }
+
+                .table-responsive {
+                    width: 100%;
+                    overflow: visible !important;
+                }
+
+                table.result-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    border-spacing: 0;
+                    font-family: Arial, sans-serif;
+                    background: #fff;
+                    font-size: 11px;
+                }
+
+                table.result-table th,
+                table.result-table td {
+                    border: 1px solid #222;
+                    padding: 5px 4px;
+                    text-align: center;
+                    vertical-align: middle;
+                    font-size: 10px;
+                }
+
+                table.result-table thead th {
+                    font-weight: 600;
+                }
+
+                table.result-table th.subject-name {
+                    font-size: 8px !important;
+                    font-weight: normal;
+                    min-width: 65px;
+                    max-width: 100px;
+                    white-space: normal;
+                }
+
+                .result-header {
+                    font-size: 13px !important;
+                    font-weight: bold;
+                    text-transform: uppercase;
+                }
+
+                p {
+                    margin: 0;
+                }
+
+                .text-danger {
+                    color: red !important;
+                }
+
+                .fw-bold {
+                    font-weight: bold;
+                }
+
+                .no-print,
+                .no-export {
+                    display: none !important;
+                }
+
+                thead {
+                    display: table-header-group;
+                }
+
+                tfoot {
+                    display: table-footer-group;
+                }
+
+                @media print {
+
+                    body {
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
+                    }
+
+                    .table-responsive {
+                        overflow: visible !important;
+                    }
+
+                    table {
+                        page-break-inside: auto;
+                    }
+
+                    tr {
+                        page-break-inside: avoid;
+                        page-break-after: auto;
+                    }
+
+                    th, td {
+                        word-wrap: break-word;
+                    }
+
+                }
+
+            </style>
+
+        </head>
+
+        <body>
+
+            ${content}
+
+        </body>
+
+        </html>
+    `);
+
+    printWindow.document.close();
+
+    printWindow.onload = function () {
+        printWindow.focus();
+        printWindow.print();
+    };
+
+});
+</script>
 
 <script>
 $("#print-nc-btn").click(function () {

@@ -30,7 +30,7 @@
 }
 
 .marks-input {
-    width: 70px;
+    width: 100%;
     text-align: center;
 }
 
@@ -45,19 +45,23 @@
     margin: 0;
 }
 
-/* Firefox */
 .adjust-inc-dec-btn[type=number] {
     -moz-appearance: textfield;
 }
 
+.mark-status {
+    margin-right: 2px;
+}
+td.align-left{
+    text-align: left !important;
+}
+td.align-right{
+    text-align: right !important;
+}
 </style>
 
 <div class="table-responsive">
 
-    {{-- @php
-        dump($rawMarks);
-    @endphp --}}
-    
 @php
 
     $maxMarks = 0;
@@ -67,6 +71,7 @@
     NON-DIPLOMA COURSES (UG etc.)
     =====================================
     */
+
     if ($course->course != 'Diploma') {
 
         $maxMarks = $subject->external_marks ?? 0;
@@ -116,65 +121,31 @@
 
     <thead>
 
-        <tr>
-            <td colspan="7" class="result-header">
-
-                <center>
-
-                    <h4>CONTROLLER OF EXAMINATIONS</h4>
-
-                    <h4>
-                        GURU ANGAD DEV VETERINARY AND ANIMAL SCIENCE UNIVERSITY,
-                        LUDHIANA (INDIA)
-                    </h4>
-
-                    <h4>{{ $className }}</h4>
-
-                    <h4>{{ $exam->name }}</h4>
-
-                </center>
-
-                <p>
-                    <b>
-                        {{ $course->name }}
-                        @if($branch)
-                            - {{ $branch->name }}
-                        @endif
-                    </b>
-                </p>
-
-                <p>
-                    Subject :
-                    {{ $subject->name }}
-                    ({{ $subject->subject_code }})
-                </p>
-
-                <p>
-                    Maximum Marks :
-                    {{ $maxMarks }}
-                </p>
-
-            </td>
-        </tr>
+        <tr><td colspan="6" class="result-header">HIMACHAL PRADESH TECHNICAL UNIVESITY, HAMIRPUR</td></tr>
+        <tr><td colspan="6">{{ $exam->exam_resultsheet_name ?? $exam->name }}</td></tr>
+        <tr><td colspan="6">{{ $course->name }} | {{ $scheme->name }} | @if(!empty($branch->name) && $branch->name != 'NA') {{ $branch->name." | " }} @endif{{ $className }} | {{ $batch->name }} | Regular</td></tr>
+        <tr><td colspan="4" class="align-left">Subject : {{ $subject->name }}({{ $subject->subject_code }}) | {{ $subject->type }}</td><td colspan="4" class="align-right">Max Marks : {{ $subject->external_marks }}</td></tr>
 
         <tr>
             <th width="40" class="no-export">
-                <input type="checkbox" id="check-all">
+                <input type="checkbox" id="check-all"> Sn no.
             </th>
+
             <th>Admission Number / Roll No</th>
             <th>Student Name</th>
             <th>Max Marks</th>
             <th>Obtained Marks</th>
             <th>Grace Marks</th>
-            <th>Moderation Marks</th>
         </tr>
 
     </thead>
 
     <tbody>
 
+        @php
+            $num = 0
+        @endphp
         @forelse($students as $student)
-        
 
             @php
 
@@ -183,22 +154,23 @@
                 $obtainedMarks = $mark->obtained_marks ?? '';
                 $graceMarks    = $mark->grace_marks ?? '';
                 $examStatus    = $mark->exam_status ?? 'present';
-                $isLocked      = $mark->is_locked ?? 0;
+                $isLocked     = $mark->is_locked ?? 0;
+
+                $isAbsent = $examStatus == 'absent';
 
             @endphp
 
             <tr>
 
                 <td class="no-export">
-                    {{-- @if(!$isLocked) --}}
-                        <input
-                            type="checkbox"
-                            class="lock-check"
-                            data-student="{{ $student->id }}"
-                            data-subject="{{ $subject->id }}"
-                        >
-                    {{-- @endif --}}
 
+                    <input
+                        type="checkbox"
+                        class="lock-check"
+                        data-student="{{ $student->id }}"
+                        data-subject="{{ $subject->id }}"
+                    >
+                    {{ ++$num }}
                 </td>
 
                 <td>
@@ -215,14 +187,25 @@
                     {{ $maxMarks }}
                 </td>
 
+                {{-- OBTAINED MARKS --}}
+
                 <td>
 
                     {{-- LOCKED --}}
+
                     @if($isLocked)
 
                         @if($examStatus == 'absent')
 
                             <span class="absent-label">AB</span>
+
+                        @elseif($examStatus == 'umc')
+
+                            <span class="text-danger fw-bold">UMC</span>
+
+                        @elseif($examStatus == 'I/F')
+
+                            <span class="text-danger fw-bold">I/F (DT)</span>
 
                         @else
 
@@ -234,92 +217,93 @@
 
                         {{-- UNLOCKED --}}
 
-                        @if($examStatus == 'absent')
+                        <input
+                            type="number"
+                            class="form-control form-control-sm adjust-inc-dec-btn marks-input save-marks no-export"
+                            value="{{ $isAbsent ? 0 : $obtainedMarks }}"
+                            min="0"
+                            max="{{ $maxMarks }}"
+                            {{ $isAbsent ? 'readonly' : '' }}
 
-                            <input
-                                type="number"
-                                class="form-control form-control-sm adjust-inc-dec-btn marks-input save-marks no-export" 
-                                value="0"
-                                min="0"
+                            data-student="{{ $student->id }}"
+                            data-subject="{{ $subject->id }}"
+                            data-max="{{ $maxMarks }}"
 
-                                data-student="{{ $student->id }}"
-                                data-subject="{{ $subject->id }}"
-                                data-max="{{ $maxMarks }}"
+                            @if($courseType == 'Annual Based')
+                                data-paper="{{ $marksType }}"
+                            @endif
+                        >
 
-                                @if($courseType == 'Annual Based')
-                                    data-paper="{{ $marksType }}"
-                                @endif
-                            >
+                        <div class="mt-1 no-export">
 
-                            <div class="mt-1">
+                            {{-- OB --}}
 
-                                <label class="no-export">
+                            <label class="small me-1">
+                                <input
+                                    type="radio"
+                                    class="mark-status"
+                                    name="status_{{ $student->id }}_{{ $subject->id }}"
+                                    data-student="{{ $student->id }}"
+                                    data-subject="{{ $subject->id }}"
+                                    value="present"
+                                    {{ (!$mark || !$examStatus || $examStatus == 'present') ? 'checked' : '' }}>
+                                OB
+                            </label>
 
-                                    <input
-                                        type="checkbox"
-                                        checked
-                                        class="mark-absent"
+                            {{-- AB --}}
 
-                                        data-student="{{ $student->id }}"
-                                        data-subject="{{ $subject->id }}"
-                                    >
+                            <label class="small me-1">
+                                <input
+                                    type="radio"
+                                    class="mark-status"
+                                    name="status_{{ $student->id }}_{{ $subject->id }}"
+                                    data-student="{{ $student->id }}"
+                                    data-subject="{{ $subject->id }}"
+                                    value="absent"
+                                    {{ $isAbsent ? 'checked' : '' }}>
+                                AB
+                            </label>
 
-                                    Absent
+                            {{-- UMC --}}
 
-                                </label>
+                            <label class="small me-1">
+                                <input
+                                    type="radio"
+                                    class="mark-status"
+                                    name="status_{{ $student->id }}_{{ $subject->id }}"
+                                    data-student="{{ $student->id }}"
+                                    data-subject="{{ $subject->id }}"
+                                    value="umc"
+                                    {{ $examStatus == 'umc' ? 'checked' : '' }}>
+                                UMC
+                            </label>
 
-                            </div>
+                            {{-- DT = I/F --}}
 
-                        @else
+                            <label class="small">
+                                <input
+                                    type="radio"
+                                    class="mark-status"
+                                    name="status_{{ $student->id }}_{{ $subject->id }}"
+                                    data-student="{{ $student->id }}"
+                                    data-subject="{{ $subject->id }}"
+                                    value="I/F"
+                                    {{ $examStatus == 'I/F' ? 'checked' : '' }}>
+                                DT
+                            </label>
 
-                            <input
-                                type="number"
-                                class="form-control form-control-sm adjust-inc-dec-btn marks-input save-marks no-export"
-                                value="{{ $obtainedMarks }}"
-                                min="0"
-
-                                data-student="{{ $student->id }}"
-                                data-subject="{{ $subject->id }}"
-                                data-max="{{ $maxMarks }}"
-
-                                @if($courseType == 'Annual Based')
-                                    data-paper="{{ $marksType }}"
-                                @endif
-                            >
-
-                            <div class="mt-1">
-
-                                <label class="no-export">
-
-                                    <input
-                                        type="checkbox"
-                                        class="mark-absent"
-
-                                        data-student="{{ $student->id }}"
-                                        data-subject="{{ $subject->id }}"
-                                    >
-
-                                    Absent
-
-                                </label>
-
-                            </div>
-
-                        @endif
+                        </div>
 
                     @endif
 
                 </td>
-                
-                {{-- GRACE MARKS COLUMN --}}
-                {{-- <td>{{ $graceMarks }}</td> --}}
 
-                {{-- ===================================== --}}
                 {{-- GRACE MARKS COLUMN --}}
-                {{-- ===================================== --}}
+
                 <td>
 
                     {{-- LOCKED --}}
+
                     @if($isLocked)
 
                         <b>{{ $graceMarks }}</b>
@@ -327,6 +311,7 @@
                     @else
 
                         {{-- UNLOCKED --}}
+
                         <div class="d-flex gap-1 no-export">
 
                             <input
@@ -358,139 +343,12 @@
 
                 </td>
 
-                <td>
-
-                    @php
-
-                        /*
-                        =====================================
-                        FETCH ADJUSTMENT
-                        =====================================
-                        */
-
-                        $adjustment = $academicAdjustments[$student->id] ?? null;
-
-                        /*
-                        =====================================
-                        DEFAULT VALUES
-                        =====================================
-                        */
-
-                        $adjustmentMarks = $adjustment->adjustment_marks ?? 0;
-
-                        $adjustmentType  = $adjustment->adjustment_type ?? '';
-
-                    @endphp
-
-                    {{-- LOCKED --}}
-                    @if($isLocked)
-
-                        <div>
-
-                            <b>
-                                {{ $adjustmentMarks }}
-                            </b>
-
-                            <br>
-
-                            <small class="no-export">
-                                {{ ucfirst($adjustmentType ?: '-') }}
-                            </small>
-
-                        </div>
-
-                    @else
-
-                        {{-- UNLOCKED --}}
-                        <div class="d-flex gap-1 no-export">
-
-                            {{-- GRACE INPUT --}}
-                            <input
-                                type="number"
-                                class="form-control form-control-sm adjust-inc-dec-btn grace-marks-input"
-                                min="0"
-                                value="{{ $adjustmentMarks }}"
-
-                                data-student="{{ $student->id }}"
-                                data-subject="{{ $subject->id }}"
-                                data-exam="{{ $exam->id }}"
-                            >
-
-                            <input 
-                                type="hidden" 
-                                name="adjustment_type"
-                                class="form-control form-control-sm adjustment-type"
-                                value="{{ $adjustmentType ?: 'moderation' }}"
-                                data-student="{{ $student->id }}"
-                                data-subject="{{ $subject->id }}"
-                            >
-
-                            {{-- ADJUSTMENT TYPE --}}
-                            {{-- <select
-                                class="form-control form-control-sm adjustment-type"
-
-                                data-student="{{ $student->id }}"
-                                data-subject="{{ $subject->id }}"
-                            >
-
-                                <option value="">Select Type</option>
-
-                                <option
-                                    value="grace"
-                                    @selected($adjustmentType == 'grace')
-                                >
-                                    Grace
-                                </option>
-
-                                <option
-                                    value="moderation"
-                                    @selected($adjustmentType == 'moderation')
-                                >
-                                    Moderation
-                                </option>
-
-                                <option
-                                    value="sports"
-                                    @selected($adjustmentType == 'sports')
-                                >
-                                    Sports
-                                </option>
-
-                                <option
-                                    value="medical"
-                                    @selected($adjustmentType == 'medical')
-                                >
-                                    Medical
-                                </option>
-
-                            </select> --}} 
-
-                            {{-- SAVE BUTTON --}}
-                            <button
-                                type="button"
-                                class="btn btn-sm btn-primary save-adjustment"
-
-                                data-student="{{ $student->id }}"
-                                data-subject="{{ $subject->id }}"
-                                data-exam="{{ $exam->id }}"
-                                data-adjustment-scope="external"
-                                data-marks-type="{{ $marksType ?? 'external' }}"
-                            >
-                                Save
-                            </button>
-
-                        </div>
-
-                    @endif
-
-                </td>
-
             </tr>
 
         @empty
 
             <tr>
-                <td colspan="6">
+                <td colspan="6" class="text-center">
                     No records found
                 </td>
             </tr>
@@ -510,90 +368,35 @@ $(document).ready(function () {
 
     /*
     =========================================================
-    TAB NAVIGATION FOR OBTAINED / GRACE / MODERATION INPUTS
+    TAB NAVIGATION
     =========================================================
     */
 
-    /*
-    =========================================================
-    INPUT GROUPS
-    =========================================================
-    */
-
-    const obtainedSelector   = '.save-marks';
-    const graceSelector      = '.grace-mark-input';
-    const moderationSelector = '.grace-marks-input';
-
-    /*
-    =========================================================
-    HANDLE TAB NAVIGATION
-    =========================================================
-    */
+    const obtainedSelector = '.save-marks';
+    const graceSelector   = '.grace-mark-input';
 
     function handleVerticalTab(selector) {
 
         $(document).on('keydown', selector, function (e) {
 
-            /*
-            ============================================
-            ONLY TAB KEY
-            ============================================
-            */
-
             if (e.key !== 'Tab') {
                 return;
             }
 
-            /*
-            ============================================
-            PREVENT DEFAULT TAB
-            ============================================
-            */
-
             e.preventDefault();
 
-            /*
-            ============================================
-            GET CURRENT INPUT
-            ============================================
-            */
-
             let current = $(this);
-
-            /*
-            ============================================
-            GET ALL VISIBLE ENABLED INPUTS
-            ============================================
-            */
 
             let inputs = $(selector)
                 .filter(':visible:not(:disabled)');
 
-            /*
-            ============================================
-            CURRENT INDEX
-            ============================================
-            */
-
             let currentIndex = inputs.index(current);
-
-            /*
-            ============================================
-            SHIFT + TAB => PREVIOUS
-            ============================================
-            */
 
             if (e.shiftKey) {
 
                 for (let i = currentIndex - 1; i >= 0; i--) {
 
                     let target = $(inputs[i]);
-
-                    /*
-                    ====================================
-                    SKIP EMPTY / MISSING INPUTS
-                    ====================================
-                    */
 
                     if (target.length) {
 
@@ -606,21 +409,9 @@ $(document).ready(function () {
 
             } else {
 
-                /*
-                ========================================
-                NORMAL TAB => NEXT
-                ========================================
-                */
-
                 for (let i = currentIndex + 1; i < inputs.length; i++) {
 
                     let target = $(inputs[i]);
-
-                    /*
-                    ====================================
-                    SKIP EMPTY / MISSING INPUTS
-                    ====================================
-                    */
 
                     if (target.length) {
 
@@ -636,15 +427,8 @@ $(document).ready(function () {
 
     }
 
-    /*
-    =========================================================
-    APPLY FOR ALL 3 INPUT TYPES
-    =========================================================
-    */
-
     handleVerticalTab(obtainedSelector);
     handleVerticalTab(graceSelector);
-    handleVerticalTab(moderationSelector);
 
 });
 

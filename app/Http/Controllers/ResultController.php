@@ -1822,33 +1822,43 @@ class ResultController extends Controller
         EXAM / COURSE / BRANCH / SUBJECT
         =====================================
         */
-        $exam       = Exam::find($examId);
-        $course     = Course::find($courseId);
-        $branch     = Branch::find($branchId);
-        $subject    = Subject::find($subjectId);
+
+        $exam    = Exam::find($examId);
+        $course  = Course::find($courseId);
+        $branch  = Branch::find($branchId);
+        $subject = Subject::find($subjectId);
+        $scheme  = Scheme::find($schemeId);
+        $batch   = Batch::find($batchId);
 
         /*
         =====================================
         CLASS NAME
         =====================================
         */
+
         if ($courseType == "Semester Based") {
 
-            $semester  = Semester::find($semesterId);
-            $className = $semester->name . " Semester";
+            $semester   = Semester::find($semesterId);
+            $className  = "Sem - ".$semester->name;
 
         } else {
 
-            $semester  = AnnualSemester::find($annualSemesterId);
-            $className = $semester->name;
+            $semester   = AnnualSemester::find($annualSemesterId);
+            $className  = $semester->name;
         }
 
         /*
         =====================================
-        STUDENTS
+        STUDENTS FROM EXAMINATION FORMS
+        =====================================
+        Only students who:
+        1. Have filled examination form
+        2. Have selected the current subject
         =====================================
         */
-        $students = Student::where('course_type', $courseType)
+
+        $examFormStudentIds = ExaminationForm::where('exam_id', $examId)
+            ->where('exam_type', "Regular")
             ->where('course_id', $courseId)
             ->where('branch_id', $branchId)
             ->where('batch_id', $batchId)
@@ -1857,24 +1867,41 @@ class ResultController extends Controller
                 $q->where('scheme_id', $schemeId);
             })
 
-            // ->when($courseType == 'Semester Based', function ($q) use ($semesterId) {
+            ->when($instituteId, function ($q) use ($instituteId) {
+                $q->where('institute_id', $instituteId);
+            })
 
-            //     $q->where('semester_id', $semesterId)
-            //         ->whereNull('annual_semester_id');
+            ->when($courseType == 'Semester Based', function ($q) use ($semesterId) {
+                $q->where('semester_id', $semesterId);
+            })
 
-            // })
+            ->whereHas('choosedSubjects', function ($q) use ($subjectId) {
+                $q->where('subject_id', $subjectId);
+            })
 
-            // ->when($courseType == 'Annual Based', function ($q) use ($annualSemesterId) {
+            ->pluck('student_id')
+            ->unique()
+            ->values();
 
-            //     $q->where('annual_semester_id', $annualSemesterId)
-            //         ->whereNull('semester_id');
+        /*
+        =====================================
+        ELIGIBLE STUDENTS
+        =====================================
+        */
 
-            // })
+        $students = Student::whereIn('id', $examFormStudentIds)
+
+            ->where('course_type', $courseType)
+            ->where('course_id', $courseId)
+            ->where('branch_id', $branchId)
+            ->where('batch_id', $batchId)
+
+            ->when($schemeId, function ($q) use ($schemeId) {
+                $q->where('scheme_id', $schemeId);
+            })
 
             ->when($instituteId, function ($q) use ($instituteId) {
-
                 $q->where('institute_id', $instituteId);
-
             })
 
             ->orderBy('institute_id')
@@ -1886,6 +1913,7 @@ class ResultController extends Controller
         MARKS
         =====================================
         */
+
         $rawMarks = EndSemMark::where('exam_id', $examId)
 
             ->where('course_type', $courseType)
@@ -1896,99 +1924,30 @@ class ResultController extends Controller
             ->where('marks_type', $marksType)
 
             ->when($schemeId, function ($q) use ($schemeId) {
-
                 $q->where('scheme_id', $schemeId);
-
             })
 
             ->when($courseType == 'Semester Based', function ($q) use ($semesterId) {
-
                 $q->where('semester_id', $semesterId)
                     ->whereNull('annual_semester_id');
-
             })
 
             ->when($courseType == 'Annual Based', function ($q) use ($annualSemesterId) {
-
                 $q->where('annual_semester_id', $annualSemesterId)
                     ->whereNull('semester_id');
-
             })
 
-            // ->when($courseType == 'Annual Based', function ($q) use ($marksType) {
-
-            //     $q->where('marks_type', $marksType);
-
-            // })
+            ->whereIn('student_id', $students->pluck('id'))
 
             ->get()
             ->keyBy('student_id');
-
-
-        /*
-        =====================================
-        ACADEMIC ADJUSTMENTS
-        =====================================
-        */
-        $academicAdjustments = AcademicAdjustment::where('exam_id', $examId)
-
-            ->where('course_type', $courseType)
-            ->where('course_id', $courseId)
-            ->where('branch_id', $branchId)
-            ->where('batch_id', $batchId)
-            ->where('subject_id', $subjectId)
-
-            ->when($schemeId, function ($q) use ($schemeId) {
-
-                $q->where('scheme_id', $schemeId);
-            })
-
-            /*
-            =====================================
-            SEMESTER BASED
-            =====================================
-            */
-            ->when($courseType == 'Semester Based', function ($q) use ($semesterId) {
-
-                $q->where('semester_id', $semesterId)
-                ->whereNull('annual_semester_id');
-            })
-
-            /*
-            =====================================
-            ANNUAL BASED
-            =====================================
-            */
-            ->when($courseType == 'Annual Based', function ($q) use ($annualSemesterId, $marksType) {
-
-                $q->where('annual_semester_id', $annualSemesterId)
-                ->whereNull('semester_id')
-                ->where('marks_type', $marksType);
-            })
-
-            ->get()
-            ->keyBy('student_id');
-
-
-        $moderationStudents = [];
-
-        foreach ($students as $student) {
-
-            $moderationStudents[] = $student->id;
-            // $moderationStudents[] = [
-            //     'student_id'         => $student->id,
-            //     'admission_no'       => $student->admission_no,
-            //     'university_roll_no' => $student->university_roll_no,
-            //     'student_name'       => $student->student_name,
-            // ];
-
-        }
 
         /*
         =====================================
         VIEW
         =====================================
         */
+
         $view = $courseType == 'Annual Based'
             ? 'backend.result.external-marks.subject-wise.annual-result'
             : 'backend.result.external-marks.subject-wise.result';
@@ -1998,10 +1957,12 @@ class ResultController extends Controller
             compact(
                 'exam',
                 'course',
+                'scheme',
                 'schemeId',
                 'annualSemesterId',
                 'instituteId',
                 'branchId',
+                'batch',
                 'batchId',
                 'branch',
                 'className',
@@ -2009,17 +1970,13 @@ class ResultController extends Controller
                 'students',
                 'rawMarks',
                 'courseType',
-                'marksType',
-                'academicAdjustments',
-                'moderationStudents'
+                'marksType'
             )
         )->render();
     }
 
-
     public function exportExternalMarks(Request $request)
     {
-        // dd($request->all());
         $institute_id       = $request->export_institute_id;
         $exam_id            = $request->export_exam_id;
         $course_type        = $request->export_course_type;
@@ -2032,80 +1989,121 @@ class ResultController extends Controller
         $marks_type         = $request->export_marks_type;
         $subject_id         = $request->export_subject_id;
 
-        // Master Data
-        $course   = Course::find($course_id);
-        $scheme   = $scheme_id ? Scheme::find($scheme_id) : null;
-        $branch   = Branch::find($branch_id);
-        $semester = Semester::find($semester_id);
-        $annual   = AnnualSemester::find($annual_semester_id);
-        $batch    = Batch::find($batch_id);
-        $subject  = Subject::find($subject_id);
-        $exam     = Exam::find($exam_id);
+        /*
+        |--------------------------------------------------------------------------
+        | MASTER DATA
+        |--------------------------------------------------------------------------
+        */
+
+        $course    = Course::find($course_id);
+        $scheme    = $scheme_id ? Scheme::find($scheme_id) : null;
+        $branch    = Branch::find($branch_id);
+        $semester  = Semester::find($semester_id);
+        $annual    = AnnualSemester::find($annual_semester_id);
+        $batch     = Batch::find($batch_id);
+        $subject   = Subject::find($subject_id);
+        $exam      = Exam::find($exam_id);
         $institute = Institute::find($institute_id);
 
-        // Student Query
-        $students = Student::query();
+        /*
+        |--------------------------------------------------------------------------
+        | EXAMINATION FORMS
+        |--------------------------------------------------------------------------
+        | Fetch matching Regular Examination Forms with chosen subjects.
+        |--------------------------------------------------------------------------
+        */
 
-        if (!empty($institute_id)) {
-            $students->where('institute_id', $institute_id);
-        }
-
-        $students->where('course_type', $course_type)
+        $examForms = ExaminationForm::where('exam_id', $exam_id)
+            ->where('exam_type', 'Regular')
             ->where('course_id', $course_id)
             ->where('branch_id', $branch_id)
-            ->where('batch_id', $batch_id);
+            ->where('batch_id', $batch_id)
+            ->when($scheme_id, function ($q) use ($scheme_id) {
+                $q->where('scheme_id', $scheme_id);
+            })
+            ->when($institute_id, function ($q) use ($institute_id) {
+                $q->where('institute_id', $institute_id);
+            })
+            ->when($course_type == 'Semester Based', function ($q) use ($semester_id) {
+                $q->where('semester_id', $semester_id);
+            })
+            ->with('choosedSubjects')
+            ->get();
 
-        if (!empty($scheme_id)) {
-            $students->where('scheme_id', $scheme_id);
+        /*
+        |--------------------------------------------------------------------------
+        | FILTER STUDENTS BY CHOSEN SUBJECT
+        |--------------------------------------------------------------------------
+        | Student will be eligible only if the exported subject exists
+        | in that student's Examination Form chosen subjects.
+        |--------------------------------------------------------------------------
+        */
+
+        $eligibleStudentIds = [];
+
+        foreach ($examForms as $form) {
+
+            $hasSubject = $form->choosedSubjects
+                ->contains(function ($chosenSubject) use ($subject_id) {
+                    return (int) $chosenSubject->subject_id === (int) $subject_id;
+                });
+
+            if ($hasSubject) {
+                $eligibleStudentIds[] = $form->student_id;
+            }
         }
 
-        if ($course_type == 'Semester Based') {
+        $eligibleStudentIds = array_unique($eligibleStudentIds);
 
-            $students->where('semester_id', $semester_id);
+        /*
+        |--------------------------------------------------------------------------
+        | STUDENTS
+        |--------------------------------------------------------------------------
+        */
 
-        } elseif ($course_type == 'Annual Based') {
+        $students = Student::whereIn('id', $eligibleStudentIds)
+            ->where('course_type', $course_type)
+            ->where('course_id', $course_id)
+            ->where('branch_id', $branch_id)
+            ->where('batch_id', $batch_id)
+            ->when($scheme_id, function ($q) use ($scheme_id) {
+                $q->where('scheme_id', $scheme_id);
+            })
+            ->when($institute_id, function ($q) use ($institute_id) {
+                $q->where('institute_id', $institute_id);
+            })
+            ->when($course_type == 'Semester Based', function ($q) use ($semester_id) {
+                $q->where('semester_id', $semester_id);
+            })
+            ->when($course_type == 'Annual Based', function ($q) use ($annual_semester_id) {
+                $q->where('annual_semester_id', $annual_semester_id);
+            })
+            ->orderBy('student_name')
+            ->get();
 
-            $students->where('annual_semester_id', $annual_semester_id);
-        }
+        /*
+        |--------------------------------------------------------------------------
+        | DEBUG
+        |--------------------------------------------------------------------------
+        */
 
-        $students->whereExists(function ($query) use (
-            $subject_id,
-            $scheme_id,
-            $course_type,
-            $semester_id,
-            $annual_semester_id
-        ) {
-
-            $query->selectRaw('1')
-                ->from('student_subjects as ss')
-                ->whereColumn('ss.student_id', 'students.id')
-                ->where('ss.subject_id', $subject_id);
-
-            if (!empty($scheme_id)) {
-                $query->where('ss.scheme_id', $scheme_id);
-            }
-
-            if ($course_type == 'Semester Based') {
-
-                $query->where('ss.semester_id', $semester_id);
-
-            } else {
-
-                $query->where('ss.annual_semester_id', $annual_semester_id);
-            }
-        });
-
-        $students = $students->orderBy('student_name')->get();
-
-        // DEBUG
         /*
         dd([
+            'total_exam_forms' => $examForms->count(),
+            'eligible_student_ids' => count($eligibleStudentIds),
             'total_students' => $students->count(),
-            'student_ids' => $students->pluck('id')
+            'student_ids' => $students->pluck('id'),
         ]);
         */
 
+        /*
+        |--------------------------------------------------------------------------
+        | CSV FILE
+        |--------------------------------------------------------------------------
+        */
+
         $subjectCode = $subject->subject_code ?? 'subject';
+
         $fileName = 'external_marks_' . $subjectCode . '_' . time() . '.csv';
 
         $headers = [
@@ -2182,6 +2180,7 @@ class ResultController extends Controller
 
         return response()->stream($callback, 200, $headers);
     }
+
 
     public function importExternalMarks(Request $request)
     {
@@ -2420,8 +2419,6 @@ class ResultController extends Controller
             );
         }
     }
-
-
 
     public function saveAcademicAdjustment(Request $request)
     {
@@ -3465,23 +3462,27 @@ class ResultController extends Controller
         $instituteId       = $request->institute_id;
 
         /*
-        ==============================
-        EXAM / COURSE / BRANCH
-        ==============================
+        |--------------------------------------------------------------------------
+        | EXAM / COURSE / BRANCH / SCHEME / BATCH
+        |--------------------------------------------------------------------------
         */
-        $exam   = Exam::find($examId);
-        $course = Course::find($courseId);
-        $branch = Branch::find($branchId);
+
+        $exam    = Exam::find($examId);
+        $course  = Course::find($courseId);
+        $branch  = Branch::find($branchId);
+        $scheme  = Scheme::find($schemeId);
+        $batch   = Batch::find($batchId);
 
         /*
-        ==============================
-        CLASS NAME
-        ==============================
+        |--------------------------------------------------------------------------
+        | CLASS NAME
+        |--------------------------------------------------------------------------
         */
-        if ($courseType == "Semester Based") {
+
+        if ($courseType == 'Semester Based') {
 
             $semester  = Semester::find($semesterId);
-            $className = $semester->name . " Semester";
+            $className = "SEM - ".$semester->name;
 
         } else {
 
@@ -3490,10 +3491,11 @@ class ResultController extends Controller
         }
 
         /*
-        ==============================
-        SUBJECTS
-        ==============================
+        |--------------------------------------------------------------------------
+        | SUBJECTS
+        |--------------------------------------------------------------------------
         */
+
         $subjects = Subject::where('course_type', $courseType)
             ->where('course_id', $courseId)
             ->where('branch_id', $branchId)
@@ -3502,11 +3504,11 @@ class ResultController extends Controller
             })
             ->when($courseType == 'Semester Based', function ($q) use ($semesterId) {
                 $q->where('semester_id', $semesterId)
-                ->whereNull('annual_semester_id');
+                    ->whereNull('annual_semester_id');
             })
             ->when($courseType == 'Annual Based', function ($q) use ($annualSemesterId) {
                 $q->where('annual_semester_id', $annualSemesterId)
-                ->whereNull('semester_id');
+                    ->whereNull('semester_id');
             })
             ->orderByRaw('CASE WHEN is_nc = 1 THEN 1 ELSE 0 END')
             ->orderBy('type')
@@ -3514,25 +3516,55 @@ class ResultController extends Controller
             ->get();
 
         /*
-        ==============================
-        STUDENTS
-        ==============================
+        |--------------------------------------------------------------------------
+        | EXAMINATION FORMS
+        |--------------------------------------------------------------------------
         */
-        $students = Student::where('course_type', $courseType)
+
+        $examForms = ExaminationForm::where('exam_id', $examId)
+            ->where('exam_type', 'Regular')
             ->where('course_id', $courseId)
             ->where('branch_id', $branchId)
             ->where('batch_id', $batchId)
             ->when($schemeId, function ($q) use ($schemeId) {
                 $q->where('scheme_id', $schemeId);
             })
-            // ->when($courseType == 'Semester Based', function ($q) use ($semesterId) {
-            //     $q->where('semester_id', $semesterId)
-            //     ->whereNull('annual_semester_id');
-            // })
-            // ->when($courseType == 'Annual Based', function ($q) use ($annualSemesterId) {
-            //     $q->where('annual_semester_id', $annualSemesterId)
-            //     ->whereNull('semester_id');
-            // })
+            ->when($instituteId, function ($q) use ($instituteId) {
+                $q->where('institute_id', $instituteId);
+            })
+            ->when($courseType == 'Semester Based', function ($q) use ($semesterId) {
+                $q->where('semester_id', $semesterId);
+            })
+            ->with('choosedSubjects')
+            ->get();
+
+        /*
+        |--------------------------------------------------------------------------
+        | UNIQUE STUDENT IDS FROM EXAMINATION FORMS
+        |--------------------------------------------------------------------------
+        */
+
+        $examFormStudentIds = $examForms
+            ->pluck('student_id')
+            ->unique()
+            ->values();
+
+        /*
+        |--------------------------------------------------------------------------
+        | STUDENTS
+        |--------------------------------------------------------------------------
+        | Only students who have submitted the matching Regular Examination Form.
+        |--------------------------------------------------------------------------
+        */
+
+        $students = Student::where('course_type', $courseType)
+            ->where('course_id', $courseId)
+            ->where('branch_id', $branchId)
+            ->where('batch_id', $batchId)
+            ->whereIn('id', $examFormStudentIds)
+            ->when($schemeId, function ($q) use ($schemeId) {
+                $q->where('scheme_id', $schemeId);
+            })
             ->when($instituteId, function ($q) use ($instituteId) {
                 $q->where('institute_id', $instituteId);
             })
@@ -3541,12 +3573,51 @@ class ResultController extends Controller
             ->get();
 
         /*
-        ==============================
-        MARKS FETCH (ðŸ”¥ FIXED)
-        ==============================
+        |--------------------------------------------------------------------------
+        | EXAMINATION FORM + CHOSEN SUBJECT MAPPING
+        |--------------------------------------------------------------------------
         */
-        $rawMarks = EndSemMark::where('exam_id', $examId)
 
+        $examFormSubjects = [];
+
+        foreach ($examForms as $form) {
+
+            foreach ($form->choosedSubjects as $chosenSubject) {
+
+                $examFormSubjects[$form->student_id][] = $chosenSubject->subject_id;
+            }
+        }
+
+        foreach ($examFormSubjects as $studentId => $subjectIds) {
+
+            $examFormSubjects[$studentId] = array_unique($subjectIds);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | FETCH END SEMESTER MARKS
+        |--------------------------------------------------------------------------
+        */
+
+        $rawMarks = EndSemMark::where('exam_id', $examId)
+            ->where('course_type', $courseType)
+            ->where('course_id', $courseId)
+            ->where('branch_id', $branchId)
+            ->where('batch_id', $batchId)
+            ->where('is_locked', 1)
+            ->when($schemeId, function ($q) use ($schemeId) {
+                $q->where('scheme_id', $schemeId);
+            })
+            ->when($courseType == 'Semester Based', function ($q) use ($semesterId) {
+                $q->where('semester_id', $semesterId)
+                    ->whereNull('annual_semester_id');
+            })
+            ->when($courseType == 'Annual Based', function ($q) use ($annualSemesterId) {
+                $q->where('annual_semester_id', $annualSemesterId)
+                    ->whereNull('semester_id');
+            })
+            ->whereIn('student_id', $students->pluck('id'))
+            ->whereIn('subject_id', $subjects->pluck('id'))
             ->when(
                 $courseType == 'Semester Based' &&
                 $course->course != 'Diploma',
@@ -3554,88 +3625,48 @@ class ResultController extends Controller
                     $q->where('marks_type', 'external');
                 }
             )
-
-            ->where('course_type', $courseType)
-            ->where('course_id', $courseId)
-            ->where('branch_id', $branchId)
-            ->where('batch_id', $batchId)
-
-            ->when($schemeId, function ($q) use ($schemeId) {
-                $q->where('scheme_id', $schemeId);
-            })
-
-            ->when($courseType == 'Semester Based', function ($q) use ($semesterId) {
-                $q->where('semester_id', $semesterId)
-                ->whereNull('annual_semester_id');
-            })
-
-            ->when($courseType == 'Annual Based', function ($q) use ($annualSemesterId) {
-                $q->where('annual_semester_id', $annualSemesterId)
-                ->whereNull('semester_id');
-            })
-
             ->get();
 
         /*
-        ==============================
-        FORMAT MARKS (ðŸ”¥ FIXED)
-        ==============================
+        |--------------------------------------------------------------------------
+        | FORMAT MARKS
+        |--------------------------------------------------------------------------
         */
+
         $marks = [];
 
         foreach ($rawMarks as $mark) {
 
-
-            if ($courseType == 'Semester Based' && $course->course != 'Diploma') {
+            if (
+                $courseType == 'Semester Based' &&
+                $course->course != 'Diploma'
+            ) {
 
                 $marks[$mark->student_id][$mark->subject_id] = [
                     'obtained_marks' => $mark->obtained_marks,
+                    'grace_marks'    => $mark->grace_marks,
                     'exam_status'    => $mark->exam_status,
                     'is_locked'      => $mark->is_locked,
-                    'grade'          => $mark->grade
+                    'grade'          => $mark->grade,
                 ];
 
             } else {
 
-
                 $marks[$mark->student_id][$mark->subject_id][$mark->marks_type] = [
                     'obtained_marks' => $mark->obtained_marks,
+                    'grace_marks'    => $mark->grace_marks,
                     'exam_status'    => $mark->exam_status,
                     'is_locked'      => $mark->is_locked,
-                    'grade'          => $mark->grade
+                    'grade'          => $mark->grade,
                 ];
             }
         }
 
         /*
-        ==============================
-        STUDENT SUBJECT MAPPING
-        ==============================
+        |--------------------------------------------------------------------------
+        | VIEW
+        |--------------------------------------------------------------------------
         */
-        $studentSubjects = StudentSubject::where('course_type', $courseType)
-            ->where('course_id', $courseId)
-            ->where('branch_id', $branchId)
-            ->when($schemeId, function ($q) use ($schemeId) {
-                $q->where('scheme_id', $schemeId);
-            })
-            ->when($courseType == 'Semester Based', function ($q) use ($semesterId) {
-                $q->where('semester_id', $semesterId);
-            }, function ($q) use ($annualSemesterId) {
-                $q->where('annual_semester_id', $annualSemesterId);
-            })
-            ->get()
-            ->groupBy('student_id')
-            ->map(function ($q) {
-                return $q->pluck('subject_id')->toArray();
-            })
-            ->toArray();
-
-        /*
-        ==============================
-        VIEW
-        ==============================
-        */
-
 
         $view = $courseType == 'Annual Based'
             ? 'backend.result.external-marks.annual-result'
@@ -3647,16 +3678,17 @@ class ResultController extends Controller
                 'exam',
                 'courseType',
                 'course',
+                'scheme',
+                'batch',
                 'branch',
                 'className',
                 'subjects',
                 'students',
                 'marks',
-                'studentSubjects'
+                'examFormSubjects'
             )
         )->render();
     }
-
 
     public function saveExternalMarks(Request $request)
     {
@@ -3823,7 +3855,8 @@ class ResultController extends Controller
                     $q->where('institute_id', $instituteId);
                 })
                 ->update([
-                    'is_locked' => $request->status
+                    'is_locked' => $request->status,
+                    'university_forword' => 1,
                 ]);
         }
 

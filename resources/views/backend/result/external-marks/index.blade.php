@@ -42,8 +42,8 @@
                     <option value="0">Marks Unlocked</option>
                 </select>
                 <button type="button" id="export-excel-btn" class="btn btn-sm btn-success">Excel</button>
-                <button type="button" id="print-btn" class="btn btn-sm btn-danger">Print PDF</button>
-                <button type="button" id="print-nc-btn" class="btn btn-sm btn-warning">Print NC Course</button>
+                <button type="button" id="extenal-marks-print-btn" class="btn btn-sm btn-danger">Print PDF</button>
+                {{-- <button type="button" id="print-nc-btn" class="btn btn-sm btn-warning">Print NC Course</button> --}}
             </div>
             <div class="card-tools">
                 <a href="{{ route('results.subject-wise.external-marks') }}" class="btn btn-sm btn-secondary">Subject-wise External Marks</a>
@@ -60,7 +60,7 @@
 </div>
 
 <script src="{{ asset('assets/libs/jquery/jquery.min.js') }}"></script>
-<script src="{{ asset('assets/libs/jquery-validate/jquery.validate.min.js') }}"></script> 
+<script src="{{ asset('assets/libs/jquery-validate/jquery.validate.min.js') }}"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 @include('backend.result.external-marks.search-marks-modal')
