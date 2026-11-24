@@ -1,3 +1,4 @@
+
 <script>
 $("#overall-internal-print-btn").click(function () {
 
@@ -41,7 +42,7 @@ $("#overall-internal-print-btn").click(function () {
                 table.overall-internal-result-table th,
                 table.overall-internal-result-table td {
                     border: 1px solid #222;
-                    padding: 5px 4px;
+                    padding: 2px 4px;
                     text-align: center;
                     vertical-align: middle;
                     font-size: 10px;
@@ -77,8 +78,9 @@ $("#overall-internal-print-btn").click(function () {
                     min-width: 45px;
                 }
 
+                /* Student row height */
                 .student-row {
-                    height: 65px;
+                    height: 30px !important;
                     page-break-inside: avoid;
                 }
 
@@ -106,6 +108,23 @@ $("#overall-internal-print-btn").click(function () {
                     font-weight: bold;
                 }
 
+                /* Grace marks breakdown */
+                .grace-breakdown {
+                    display: block;
+                    font-size: 6px !important;
+                    line-height: 1 !important;
+                    margin-top: 0;
+                    white-space: nowrap;
+                }
+
+                /* Compact tbody */
+                table.overall-internal-result-table tbody td {
+                    height: 30px !important;
+                    padding: 0px 2px !important;
+                    line-height: 1 !important;
+                    vertical-align: middle;
+                }
+
                 .no-print,
                 .no-export {
                     display: none !important;
@@ -128,6 +147,24 @@ $("#overall-internal-print-btn").click(function () {
 
                     .table-responsive {
                         overflow: visible !important;
+                    }
+
+                    table.overall-internal-result-table {
+                        width: 100%;
+                    }
+
+                    table.overall-internal-result-table thead th {
+                        padding: 2px 4px;
+                    }
+
+                    table.overall-internal-result-table tbody td {
+                        height: 30px !important;
+                        padding: 0px 1px !important;
+                        line-height: 1 !important;
+                    }
+
+                    .grace-breakdown {
+                        font-size: 6px !important;
                     }
 
                     tr {
@@ -374,6 +411,187 @@ $("#extenal-marks-print-btn").click(function () {
     printWindow.onload = function () {
         printWindow.focus();
         printWindow.print();
+    };
+
+});
+</script>
+
+
+<script>
+$("#print-result-sheet-btn").click(function () {
+
+    var content = $(".result-sheet").prop("outerHTML");
+
+    var printWindow = window.open('', '', 'width=1400,height=900');
+
+    printWindow.document.write(`
+        <html>
+        <head>
+            <title>Result Tabulation Sheet</title>
+
+            <style>
+
+                @page {
+                    size: A3 landscape;
+                    margin: 8mm;
+                }
+
+                * {
+                    box-sizing: border-box;
+                }
+
+                body {
+                    font-family: Arial, sans-serif;
+                    margin: 0;
+                    padding: 0;
+                    background: #fff;
+                    color: #000;
+                }
+
+                .result-sheet {
+                    width: 100% !important;
+                    overflow: visible !important;
+                    color: #000;
+                }
+
+                .result-sheet table {
+                    width: 100% !important;
+                    min-width: 0 !important;
+                    border: 1px solid #000;
+                    border-collapse: collapse;
+                    border-spacing: 0;
+                    font-size: 9px;
+                    table-layout: auto;
+                }
+
+                .result-sheet table tr th {
+                    text-align: center;
+                }
+
+                .result-sheet table tr th,
+                .result-sheet table tr td {
+                    border: 1px solid #000;
+                    border-collapse: collapse;
+                    text-align: center;
+                    padding: 1px 2px;
+                }
+
+                /* Vertical Text */
+                .vertical-text {
+                    writing-mode: vertical-rl;
+                    transform: rotate(360deg);
+                    white-space: nowrap;
+                }
+
+                .mini-text {
+                    font-size: 6px !important;
+                }
+
+                /* Candidate Information Columns */
+                .result-sheet table tbody tr td:nth-child(2),
+                .result-sheet table tbody tr td:nth-child(3),
+                .result-sheet table tbody tr td:nth-child(4) {
+                    min-width: 120px !important;
+                }
+
+                /* Tbody Alignment */
+                .result-sheet table tbody tr td {
+                    vertical-align: top !important;
+                }
+
+                /* Failed Background */
+                td.failed-bg {
+                    background-color: #fd4242 !important;
+                    color: #fff !important;
+                }
+
+                /* Text Colors */
+                .text-danger {
+                    color: red !important;
+                }
+
+                /* Hide Elements */
+                .no-print,
+                .no-export {
+                    display: none !important;
+                }
+
+                /* Table Header Repeat */
+                thead {
+                    display: table-header-group;
+                }
+
+                tfoot {
+                    display: table-footer-group;
+                }
+
+                /* Paragraph */
+                p {
+                    margin: 0;
+                }
+
+                /* Print Settings */
+                @media print {
+
+                    body {
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                    }
+
+                    .result-sheet {
+                        width: 100% !important;
+                        overflow: visible !important;
+                    }
+
+                    .result-sheet table {
+                        width: 100% !important;
+                        min-width: 0 !important;
+                    }
+
+                    .result-sheet table th,
+                    .result-sheet table td {
+                        padding: 1px !important;
+                    }
+
+                    .result-sheet table tbody td {
+                        vertical-align: top !important;
+                    }
+
+                    tr {
+                        page-break-inside: avoid;
+                    }
+
+                    .no-print,
+                    .no-export {
+                        display: none !important;
+                    }
+
+                }
+
+            </style>
+
+        </head>
+
+        <body>
+
+            ${content}
+
+        </body>
+
+        </html>
+    `);
+
+    printWindow.document.close();
+
+    printWindow.onload = function () {
+
+        printWindow.focus();
+
+        setTimeout(function () {
+            printWindow.print();
+            printWindow.close();
+        }, 500);
+
     };
 
 });

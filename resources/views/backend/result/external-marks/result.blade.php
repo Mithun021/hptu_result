@@ -78,10 +78,8 @@
                 <td colspan="{{ 5 + $filteredSubjects->count() }}">
                     {{ $course->name }}
                     | {{ $scheme->name }}
-                    | @if(!empty($branch->name) && $branch->name != 'NA')
-                        {{ $branch->name }} |
-                    @endif
-                    {{ $className }}
+                    | {{ $branch->name }}
+                    | {{ $className }}
                     | {{ $batch->name }}
                     | Regular
                 </td>
@@ -250,9 +248,9 @@
 
                                     @if($hasGrace)
 
-                                        <br>
+                                        <br class="no-export">
 
-                                        <small>
+                                        <small class="no-export">
                                             ({{ $formattedObtained }} + {{ $formattedGrace }})
                                         </small>
 

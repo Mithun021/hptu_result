@@ -8,7 +8,6 @@ use Illuminate\Database\Eloquent\Model;
 class PassPercentage extends Model
 {
     use HasFactory;
-
     protected $table = 'pass_percentages';
 
     protected $fillable = [

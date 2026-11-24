@@ -22,6 +22,7 @@ $(document).ready(function () {
             branch_id: { required: true },
 
             batch_id: { required: true },
+            scheme_id: { required: true },
 
             marks_type: { required: true },
 
@@ -52,6 +53,7 @@ $(document).ready(function () {
             branch_id: "Select branch",
 
             batch_id: "Select batch",
+            scheme_id: "Select scheme",
 
             semester_id: "Select semester",
 

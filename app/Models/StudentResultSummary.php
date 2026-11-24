@@ -15,6 +15,14 @@ class StudentResultSummary extends Model
         'result_status',
         'grade_status',
         'remarks',
+
+        'retotalling_gpa',
+        'retotalling_cgpa',
+        'retotalling_result_status',
+        'retotalling_grade_status',
+        'retotalling_remarks',
+        'retotalling_upload_by ',
+
         'exam_id',
         'course_type',
         'course_id',
@@ -32,6 +40,11 @@ class StudentResultSummary extends Model
     RELATIONS
     =============================
     */
+
+    public function retotalling_upload_by()
+    {
+        return $this->belongsTo(User::class);
+    }
 
     // Student Relation
     public function student()

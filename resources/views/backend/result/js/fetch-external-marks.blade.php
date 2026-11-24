@@ -36,6 +36,7 @@ $(document).ready(function () {
             course_id: { required: true },
             branch_id: { required: true },
             batch_id: { required: true },
+            scheme_id: { required: true },
 
             semester_id: {
                 required: function () {
@@ -56,6 +57,7 @@ $(document).ready(function () {
             course_id: "Select course",
             branch_id: "Select branch",
             batch_id: "Select batch",
+            scheme_id: "Select scheme",
             semester_id: "Select semester",
             annual_semester_id: "Select annual semester"
         }
@@ -346,7 +348,7 @@ $(document).on("change", ".grade-radio", function () {
     payload.marks = grade;        // ✅ FIXED (was grade)
     payload.status = "present";   // ✅ FIXED (added)
 
-    payload.marks_type = "external"; 
+    payload.marks_type = "external";
     payload.is_nc      = 1;
 
     $.ajax({

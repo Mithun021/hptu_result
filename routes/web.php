@@ -273,15 +273,6 @@ Route::middleware(['backend.auth'])->prefix('backend')->group(function () {
         Route::get('/result-prepare/fetch', [ResultController::class, 'fetchEndSemResult'])
             ->name('result-prepare.fetch');
 
-        Route::get('/endsem-result', [ResultController::class, 'endSemResultPrepare'])
-            ->name('end-sem.result-prepare');
-
-        Route::get('/endsem-result/fetch', [ResultController::class, 'finalFetchEndSemResult'])
-            ->name('final-result.fetch');
-
-        Route::post('/fetch-result-detail', [ResultController::class, 'fetchEndSemResult'])
-        ->name('fetch.result.detail');
-
         Route::post('/save-result-sheet', [ResultController::class, 'saveResultSheet'])
         ->name('save.result.sheet');
 

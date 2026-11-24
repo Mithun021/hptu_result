@@ -58,7 +58,7 @@
     }
 
     .student-row {
-        height: 65px;
+        height: 30px !important;
     }
 
     .text-danger {
@@ -69,14 +69,33 @@
         font-weight: bold;
     }
 
-    .font-size-8{
+    .font-size-8 {
         font-size: 7px !important;
     }
+
     th.width-col-180 {
         min-width: 180px !important;
     }
-    p{
+
+    p {
         margin: 0;
+    }
+
+    /* Grace marks breakdown */
+    .grace-breakdown {
+        display: block;
+        font-size: 6px !important;
+        line-height: 1 !important;
+        margin-top: 0;
+        white-space: nowrap;
+    }
+
+    /* Compact tbody rows */
+    table.overall-internal-result-table tbody td {
+        height: 30px !important;
+        padding: 0px 2px !important;
+        line-height: 1 !important;
+        vertical-align: middle;
     }
 
     @media print {
@@ -95,9 +114,25 @@
         }
 
         table.overall-internal-result-table th,
-        table.result-table td {
+        table.overall-internal-result-table td {
             font-size: 8px;
+        }
+
+        /* Header padding remains unchanged */
+        table.overall-internal-result-table thead th {
             padding: 3px;
+        }
+
+        /* Compact body for printing */
+        table.overall-internal-result-table tbody td {
+            height: 30px !important;
+            padding: 0px 1px !important;
+            line-height: 1 !important;
+        }
+
+        .grace-breakdown {
+            font-size: 6px !important;
+            line-height: 1 !important;
         }
 
         .no-print {
@@ -105,10 +140,9 @@
         }
 
         .student-row {
+            height: 30px !important;
             page-break-inside: avoid;
         }
-
-
     }
 </style>
 
@@ -145,7 +179,7 @@
             {{-- RESULT HEADING --}}
             <tr>
                 <th colspan="{{ $totalColumns }}" class="university-heading">
-                    {{ ucwords(strtoupper($exam->exam_resultsheet_name ?? $exam->name )) }}
+                    {{ ucwords(strtoupper($exam->exam_resultsheet_name ?? $exam->name)) }}
                 </th>
             </tr>
 
@@ -190,6 +224,7 @@
             {{-- SUBJECT NAME --}}
             <tr>
                 <th rowspan="3" colspan="5"></th>
+
                 @foreach ($subjects as $subject)
 
                     <th colspan="{{ $subject->type == 'Practical' ? 2 : 1 }}"
@@ -334,6 +369,29 @@
 
                             $externalMarks = $marks[$student->id][$subject->id]['external'] ?? '-';
 
+                            // Grace marks calculation (only if available in array)
+                            $obtainedMarks = null;
+                            $graceMarks = 0;
+                            $hasGraceMarks = false;
+
+                            if (is_array($internalMarks)) {
+
+                                $obtainedMarks = $internalMarks['obtained_marks'] ?? 0;
+
+                                $graceMarks = $internalMarks['grace_marks'] ?? 0;
+
+                                if ($graceMarks != 0 && $graceMarks != null) {
+
+                                    $hasGraceMarks = true;
+
+                                    $internalMarks = $obtainedMarks + $graceMarks;
+
+                                } else {
+
+                                    $internalMarks = $obtainedMarks;
+                                }
+                            }
+
                         @endphp
 
                         {{-- INTERNAL MARKS --}}
@@ -341,7 +399,21 @@
 
                             @if ($isAssigned)
 
-                                {!! $internalMarks !!}
+                                @if ($hasGraceMarks)
+
+                                    <span class="fw-bold">
+                                        {{ $internalMarks }}
+                                    </span>
+
+                                    <small class="grace-breakdown no-export">
+                                        ({{ $obtainedMarks }} + {{ $graceMarks }})
+                                    </small>
+
+                                @else
+
+                                    {!! $internalMarks !!}
+
+                                @endif
 
                             @else
 

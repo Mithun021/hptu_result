@@ -14,17 +14,15 @@ $(document).ready(function () {
 
             exam_id: { required: true },
 
-            // midsem_exam_id: { required: true },
-
             course_type: { required: true },
 
             course_id: { required: true },
 
+            scheme_id: { required: true },
+
             branch_id: { required: true },
 
             batch_id: { required: true },
-
-            // marks_type: { required: true },
 
             subject_id: { required: true },
 
@@ -46,9 +44,9 @@ $(document).ready(function () {
 
             exam_id: "Please select exam",
 
-            // midsem_exam_id: "Please select Mid-Sem exam",
-
             course_type: "Select course type",
+
+            scheme_id: "Select scheme",
 
             course_id: "Select course",
 
@@ -59,10 +57,6 @@ $(document).ready(function () {
             semester_id: "Select semester",
 
             annual_semester_id: "Select annual semester",
-
-            // marks_type: "Select marks type",
-
-            subject_id: "Select subject",
 
         }
 

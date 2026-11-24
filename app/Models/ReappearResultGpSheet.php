@@ -5,22 +5,32 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class SuppleResultSummary extends Model
+class ReappearResultGpSheet extends Model
 {
     use HasFactory;
 
-    protected $table = 'supple_student_result_summary';
+    protected $table = 'reappear_result_gp_sheet';
 
     protected $fillable = [
 
         'student_id',
+        'subject_id',
+        'credits',
 
-        'gpa',
-        'cgpa',
-        'is_supple',
-        'result_status',
-        'grade_status',
-        'remarks',
+        'result',
+        'is_reappear',
+        'earn_credit_point',
+        'grade',
+        'gain_percentage',
+        'credit_score',
+        'retotalling_credits',
+        'retotalling_result',
+        'retotalling_is_reappear',
+        'retotalling_earn_credit_point',
+        'retotalling_grade',
+        'retotalling_gain_percentage',
+        'retotalling_credit_score',
+        'retotalling_upload_by ',
 
         'exam_id',
         'course_type',
@@ -32,21 +42,31 @@ class SuppleResultSummary extends Model
         'batch_id',
         'institute_id',
 
-        'result_declare',
-
     ];
 
     protected $casts = [
-
-        'gpa' => 'decimal:3',
-        'cgpa' => 'decimal:3',
-        'result_declare' => 'boolean',
-
+        'is_supple' => 'boolean',
+        'result_gp' => 'decimal:3',
     ];
+
+    public function retotalling_upload_by()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function institute()
+    {
+        return $this->belongsTo(Institute::class);
+    }
 
     public function student()
     {
         return $this->belongsTo(Student::class);
+    }
+
+    public function subject()
+    {
+        return $this->belongsTo(Subject::class);
     }
 
     public function exam()
@@ -64,21 +84,16 @@ class SuppleResultSummary extends Model
         return $this->belongsTo(Branch::class,'branch_id');
     }
 
-    public function batch()
-    {
-        return $this->belongsTo(Batch::class,'batch_id');
-    }
-    
     public function scheme()
     {
         return $this->belongsTo(Scheme::class, 'scheme_id');
     }
 
-    public function institute()
+    public function batch()
     {
-        return $this->belongsTo(Institute::class, 'institute_id');
+        return $this->belongsTo(Batch::class,'batch_id');
     }
-    
+
     public function semester()
     {
         return $this->belongsTo(Semester::class);

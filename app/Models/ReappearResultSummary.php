@@ -5,22 +5,30 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class SuppleResultGpSheet extends Model
+class ReappearResultSummary extends Model
 {
     use HasFactory;
 
-    protected $table = 'supple_result_gp_sheet';
+    protected $table = 'reappear_student_result_summary';
 
     protected $fillable = [
 
         'student_id',
-        'subject_id',
-        'credits',
 
-        'result',
+        'gpa',
+        'cgpa',
         'is_supple',
-        'result_gp',
-        'grade',
+        'result_status',
+        'grade_status',
+        'remarks',
+
+        'retotalling_gpa',
+        'retotalling_cgpa',
+        'retotalling_is_supple',
+        'retotalling_result_status',
+        'retotalling_grade_status',
+        'retotalling_remarks',
+        'retotalling_upload_by',
 
         'exam_id',
         'course_type',
@@ -32,26 +40,26 @@ class SuppleResultGpSheet extends Model
         'batch_id',
         'institute_id',
 
+        'result_declare',
+
     ];
 
     protected $casts = [
-        'is_supple' => 'boolean',
-        'result_gp' => 'decimal:3',
+
+        'gpa' => 'decimal:3',
+        'cgpa' => 'decimal:3',
+        'result_declare' => 'boolean',
+
     ];
-    
-    public function institute()
+
+    public function retotalling_upload_by()
     {
-        return $this->belongsTo(Institute::class);
+        return $this->belongsTo(User::class);
     }
 
     public function student()
     {
         return $this->belongsTo(Student::class);
-    }
-
-    public function subject()
-    {
-        return $this->belongsTo(Subject::class);
     }
 
     public function exam()
@@ -68,17 +76,22 @@ class SuppleResultGpSheet extends Model
     {
         return $this->belongsTo(Branch::class,'branch_id');
     }
-    
-    public function scheme()
-    {
-        return $this->belongsTo(Scheme::class, 'scheme_id');
-    }
 
     public function batch()
     {
         return $this->belongsTo(Batch::class,'batch_id');
     }
-    
+
+    public function scheme()
+    {
+        return $this->belongsTo(Scheme::class, 'scheme_id');
+    }
+
+    public function institute()
+    {
+        return $this->belongsTo(Institute::class, 'institute_id');
+    }
+
     public function semester()
     {
         return $this->belongsTo(Semester::class);

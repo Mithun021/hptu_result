@@ -123,7 +123,7 @@ td.align-right{
 
         <tr><td colspan="6" class="result-header">HIMACHAL PRADESH TECHNICAL UNIVESITY, HAMIRPUR</td></tr>
         <tr><td colspan="6">{{ $exam->exam_resultsheet_name ?? $exam->name }}</td></tr>
-        <tr><td colspan="6">{{ $course->name }} | {{ $scheme->name }} | @if(!empty($branch->name) && $branch->name != 'NA') {{ $branch->name." | " }} @endif{{ $className }} | {{ $batch->name }} | Regular</td></tr>
+        <tr><td colspan="6">{{ $course->name }} | {{ $scheme->name }} | {{ $branch->name ?? '' }} | {{ $batch->name }} | Regular</td></tr>
         <tr><td colspan="4" class="align-left">Subject : {{ $subject->name }}({{ $subject->subject_code }}) | {{ $subject->type }}</td><td colspan="4" class="align-right">Max Marks : {{ $subject->external_marks }}</td></tr>
 
         <tr>

@@ -13,10 +13,18 @@ class ResultGpSheet extends Model
         'subject_id',
         'credits',
         'result',
-        'result_gp',
+        'earn_credit_point',
         'grade',
-        'gpa',
-        'cgpa',
+        'gain_percentage',
+        'credit_score',
+        'retotalling_credits',
+        'retotalling_result',
+        'retotalling_earn_credit_point',
+        'retotalling_grade',
+        'retotalling_gain_percentage',
+        'retotalling_credit_score',
+        'retotalling_upload_by',
+
         'exam_id',
         'course_type',
         'course_id',
@@ -27,6 +35,11 @@ class ResultGpSheet extends Model
         'batch_id',
         'institute_id'
     ];
+
+    public function retotalling_upload_by()
+    {
+        return $this->belongsTo(User::class);
+    }
 
     public function student()
     {

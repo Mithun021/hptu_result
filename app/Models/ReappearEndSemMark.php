@@ -4,9 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class SuppleEndSemMark extends Model
+class ReappearEndSemMark extends Model
 {
-    protected $table = 'supple_end_sem_marks';
+    protected $table = 'reappear_end_sem_marks';
 
     protected $fillable = [
 
@@ -31,7 +31,7 @@ class SuppleEndSemMark extends Model
         'annual_semester_id',
 
         'scheme_id',
-        
+
         'marks_type',
 
         'max_marks',
@@ -42,6 +42,10 @@ class SuppleEndSemMark extends Model
 
         'exam_status',
 
+        'retotalling_obtained_marks',
+        'retotalling_upload_by',
+        'retotalling_marks_locked',
+
         'is_locked',
     ];
 
@@ -50,6 +54,11 @@ class SuppleEndSemMark extends Model
     | Relationships
     |--------------------------------------------------------------------------
     */
+
+    public function retotalling_upload_by()
+    {
+        return $this->belongsTo(User::class);
+    }
 
     public function student()
     {

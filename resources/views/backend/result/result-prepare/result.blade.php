@@ -1,923 +1,439 @@
+
 <style>
-.result-container {
-    width: 100%;
-    margin: auto;
-    font-family: Arial, Helvetica, sans-serif;
-}
+    .result-sheet {
+        width: 100%;
+        overflow-x: auto;
+        color: #000;
+    }
 
-.result-header {
-    text-align: center;
-    margin-bottom: 10px;
-}
+    .result-sheet table {
+        width: max-content;
+        min-width: 100%;
+        border: 1px solid #000;
+        border-collapse: collapse;
+        font-size: 9px;
+    }
 
-.result-header h3 {
-    margin: 0;
-    font-size: 18px;
-    font-weight: bold;
-}
+    .result-sheet table tr th {
+        text-align: center;
+    }
 
-.result-header h4 {
-    margin: 2px 0;
-    font-size: 16px;
-}
+    .result-sheet table tr th,
+    .result-sheet table tr td {
+        border: 1px solid #000;
+        border-collapse: collapse;
+        text-align: center;
+    }
 
-.result-header p {
-    margin: 4px 0;
-    font-size: 14px;
-}
+    .vertical-text {
+        writing-mode: vertical-rl;
+        transform: rotate(360deg);
+        white-space: nowrap;
+    }
 
-.course-info {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 6px;
-    font-size: 12px;
-}
+    .mini-text {
+        font-size: 6px;
+    }
 
-.result-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 12px;
-}
+    .result-sheet table tbody tr td:nth-child(2),
+    .result-sheet table tbody tr td:nth-child(3),
+    .result-sheet table tbody tr td:nth-child(4) {
+        min-width: 120px;
+    }
 
-.result-table th,
-.result-table td {
-    border: 1px solid #000;
-    padding: 6px;
-    text-align: center;
-}
+    .result-sheet table thead tr:last-child th:nth-child(2),
+    .result-sheet table thead tr:last-child th:nth-child(3),
+    .result-sheet table thead tr:last-child th:nth-child(4) {
+        min-width: 120px;
+    }
 
-.result-table th {
-    background: #f2f2f2;
-    font-weight: bold;
-}
+    .result-sheet table tbody tr td {
+        vertical-align: top;
+    }
 
-.result-table td.student-name {
-    text-align: left;
-}
-
-td.align-left {
-    text-align: left;
-}
-
-td.align-right {
-    text-align: right;
-}
-
+    td.failed-bg {
+        background-color: #fd4242;
+        color: #FFF;
+    }
 </style>
 
 @php
+    $subjectCount = $subjects->count();
 
-/*
-=====================================
-SUBJECT MAX MARKS
-=====================================
-*/
+    $totalColumns = 5 + ($subjectCount * 4) + 9;
 
-if ($subject->type == "Theory") {
+    $examMonth = strtoupper($exam->exam_month ?? '');
 
-    $theoryMidMax   = $subject->mid_sem_marks1;
-    $theoryQuizMax  = $subject->mid_sem_marks2;
-    $theoryFinalMax = $subject->external_marks;
+    $examYear = $exam->exam_year ?? '';
 
-    $practicalMidMax   = 0;
-    $practicalQuizMax  = 0;
-    $practicalFinalMax = $subject->mid_sem_marks3;
+    $sessionName = trim($examMonth . ' ' . $examYear);
 
-} else {
+    $semesterName = $className;
 
-    $theoryMidMax   = 0;
-    $theoryQuizMax  = 0;
-    $theoryFinalMax = 0;
+    $courseName = $course->name ?? '';
 
-    $practicalMidMax   = $subject->mid_sem_marks1;
-    $practicalQuizMax  = $subject->mid_sem_marks2;
-    $practicalFinalMax = $subject->mid_sem_marks3;
-}
+    $branchName = $branch->name ?? '';
 
-$theoryTotalMax    = $theoryMidMax + $theoryQuizMax + $theoryFinalMax;
-$practicalTotalMax = $practicalMidMax + $practicalQuizMax + $practicalFinalMax;
-$grandTotalMax     = $theoryTotalMax + $practicalTotalMax;
+    $schemeName = $scheme->name ?? '';
 
-/*
-=====================================
-PASS RULE
-=====================================
-*/
-
-$overallPassPercent = $passPercentage->overall_pass_percentage ?? 50;
-$theoryMinPercent   = $passPercentage->theory_min_percentage ?? 20;
-
-$requiredMarks  = ($grandTotalMax * $overallPassPercent) / 100;
-$theoryMinMarks = ($theoryFinalMax * $theoryMinPercent) / 100;
-$theoryPassMarks = ($theoryFinalMax * $overallPassPercent) / 100;
-$theoryTotalPassMarks = ($theoryTotalMax * $overallPassPercent) / 100;
-
-$practicalMinMarks = ($practicalFinalMax * 50) / 100;
-$courseTypeName = $course->course;
+    $universityName = 'Himachal Pradesh Technical Univesity, Hamirpur';
 @endphp
 
+<div class="result-sheet">
+    <table>
+        <thead>
+
+            {{-- UNIVERSITY NAME --}}
+            <tr>
+                <th colspan="{{ $totalColumns }}">
+                    {{ $universityName }}
+                </th>
+            </tr>
+
+            {{-- EXAM SESSION --}}
+            <tr>
+                <th colspan="{{ $totalColumns }}">
+                    RESULT TABULATION SHEET OF EXAMINATION SESSION,
+                    {{ $sessionName }}
+                </th>
+            </tr>
+
+            {{-- COURSE DETAILS --}}
+            <tr>
+                <th colspan="{{ $totalColumns }}">
+                    {{ $courseName }}
+                    @if(!empty($branchName))
+                        | {{ $branchName }}
+                    @endif
+                    | {{ $schemeName }}
+                    | {{ $semesterName }}
+                    || Regular
+                </th>
+            </tr>
+
+            {{-- SUBJECT CODES + SUMMARY HEADERS --}}
+            <tr>
+                <th colspan="5">
+                    Name & Particular of Candidate
+                </th>
+
+                @foreach($subjects as $subject)
+                    <th colspan="4">
+                        {{ $subject->subject_code }}
+                    </th>
+                @endforeach
+
+                <th rowspan="6">
+                    Result
+                </th>
+
+                <th rowspan="6">
+                    <span class="vertical-text">
+                        Total Current Credit Point
+                    </span>
+                </th>
+
+                <th rowspan="6">
+                    <span class="vertical-text">
+                        Current Grade Point Earn
+                    </span>
+                </th>
+
+                <th rowspan="6">
+                    <span class="vertical-text">
+                        SGPA
+                    </span>
+                </th>
+
+                <th rowspan="6">
+                    <span class="vertical-text">
+                        Previous Credit Point
+                    </span>
+                </th>
+
+                <th rowspan="6">
+                    <span class="vertical-text">
+                        Previous Grade Point Earn
+                    </span>
+                </th>
+
+                <th rowspan="6">
+                    <span class="vertical-text">
+                        CGPA
+                    </span>
+                </th>
+
+                <th rowspan="6">
+                    <span class="vertical-text">
+                        Previous Result Status
+                    </span>
+                </th>
+
+                <th rowspan="6">
+                    <span class="vertical-text">
+                        Remark
+                    </span>
+                </th>
+            </tr>
+
+            {{-- SUBJECT NAMES --}}
+            <tr>
+                <th rowspan="2" colspan="5"></th>
+
+                @foreach($subjects as $subject)
+                    <th colspan="4">
+                        {{ $subject->name }} - {{ $subject->type }}
+                    </th>
+                @endforeach
+            </tr>
+
+            {{-- EXTERNAL / INTERNAL / TOTAL / GRADE --}}
+            <tr>
+                @foreach($subjects as $subject)
+                    <th>
+                        <span class="vertical-text">External</span>
+                    </th>
+
+                    <th>
+                        <span class="vertical-text">Internal</span>
+                    </th>
+
+                    <th>
+                        <span class="vertical-text">Total</span>
+                    </th>
+
+                    <th>
+                        <span class="vertical-text">Grade</span>
+                    </th>
+                @endforeach
+            </tr>
+
+            {{-- MAXIMUM MARKS --}}
+            <tr>
+                <th colspan="5"></th>
+
+                @foreach($subjects as $subject)
+                    <th>{{ $subject->external_marks }}</th>
+                    <th>{{ $subject->internal_marks }}</th>
+                    <th>
+                        {{ (float)$subject->external_marks + (float)$subject->internal_marks }}
+                    </th>
+                    <th></th>
+                @endforeach
+            </tr>
+
+            {{-- PASS MARKS --}}
+            <tr>
+                <th colspan="5"></th>
+
+                @foreach($subjects as $subject)
+                    @php
+                        $passPercentage = \App\Models\PassPercentage::where('course_id', $course->id)
+                            ->where('scheme_id', $scheme->id)
+                            ->first();
 
-<table class="result-table result-table-a4">
+                        $passPercent = $passPercentage->overall_pass_percentage ?? 0;
+                    @endphp
 
-<thead>
+                    <th>
+                        {{ round(($subject->external_marks * $passPercent) / 100, 2) }}
+                    </th>
+
+                    <th>
+                        {{ round(($subject->internal_marks * $passPercent) / 100, 2) }}
+                    </th>
+
+                    <th>
+                        {{ round(
+                            (($subject->external_marks + $subject->internal_marks) * $passPercent) / 100,
+                            2
+                        ) }}
+                    </th>
+
+                    <th></th>
+                @endforeach
+            </tr>
+
+            {{-- CREDIT --}}
+            <tr>
+                <th>SN</th>
+                <th>Roll No</th>
+                <th>College</th>
+                <th>Name</th>
+                <th>Father Name</th>
 
-<tr>
-<td colspan="{{ $courseTypeName == 'Diploma' ? 12 : 14 }}" class="result-header">
+                @foreach($subjects as $subject)
+                    <th></th>
+                    <th></th>
+                    <th></th>
+                    <th>{{ $subject->credits }}</th>
+                @endforeach
+            </tr>
 
-    <center>
-        <h3>OFFICE OF CONTROLLER OF EXAMINATIONS</h3>
-        <h4>GURU ANGAD DEV VETERINARY AND ANIMAL SCIENCES UNIVERSITY, LUDHIANA (INDIA)</h4>
-        <h4>{{ $exam->exam_resultsheet_name ?? $exam->name }}</h4>
-    </center>
+        </thead>
 
-    <div class="course-info">
+        {{-- STUDENT RESULT --}}
+        <tbody>
 
-        <div>
-            <strong>Class :</strong>
+            @foreach($students as $index => $student)
 
-            ({{ $className }}) -
+                @php
+                    $studentResult = $marks[$student->id] ?? [];
 
-            ({{ $course->name ?? '' }})
+                    $studentSubjects = $studentResult['subjects'] ?? [];
 
-            @if(!empty($branch->name) && $branch->name != 'NA')
-                ({{ $branch->name }})
-            @endif
-        </div>
+                    $studentInstituteName = $institutes[$student->institute_id] ?? '';
+                @endphp
 
-        <div>
-            <strong>Subject :</strong>
-            {{ $subject->name }} ({{ $subject->subject_code }})
-        </div>
+                <tr>
+                    {{-- SERIAL --}}
+                    <td>{{ $loop->iteration }}</td>
 
-    </div>
+                    {{-- ROLL NO --}}
+                    <td>
+                        {{ $student->university_roll_no }}
+                    </td>
 
-</td>
-</tr>
+                    {{-- COLLEGE --}}
+                    <td>
+                        {{ $studentInstituteName }}
+                    </td>
 
-<tr>
+                    {{-- STUDENT NAME --}}
+                    <td>
+                        {{ $student->student_name }}
+                    </td>
 
-<th rowspan="3">Sr No</th>
-<th rowspan="3">Student Name</th>
-<th rowspan="3">Admission No</th>
-<th rowspan="3">CP</th>
+                    {{-- FATHER NAME --}}
+                    <td>
+                        {{ $student->father_name }}
+                    </td>
 
-@if($subject->type == "Theory")
+                    {{-- SUBJECTS --}}
+                    @foreach($subjects as $subject)
 
-    {{-- THEORY SUBJECT --}}
+                        @php
+                            $subjectData = $studentSubjects[$subject->id] ?? null;
 
-    <th colspan="{{ ($course->course ?? '') == 'Diploma' ? 3 : 4 }}">Theory</th>
-    <th rowspan="2">Total</th>
+                            $internal = $subjectData['internal_marks'] ?? null;
 
-    <th colspan="{{ ($course->course ?? '') == 'Diploma' ? 2 : 3 }}">Practical</th>
-    <th rowspan="2">Total</th>
+                            $external = $subjectData['external_marks'] ?? null;
 
-@else
+                            $total = $subjectData['total'] ?? null;
 
-    {{-- PRACTICAL SUBJECT --}}
+                            $result = $subjectData['result'] ?? '';
 
-    <th colspan="{{ ($course->course ?? '') == 'Diploma' ? 2 : 3 }}">Theory</th>
-    <th rowspan="2">Total</th>
+                            $percentage = $subjectData['percentage'] ?? null;
 
-    <th colspan="{{ ($course->course ?? '') == 'Diploma' ? 3 : 4 }}">Practical</th>
-    <th rowspan="2">Total</th>
+                            $grade = $subjectData['grade'] ?? '';
 
-@endif
+                            $gradePoint = $subjectData['grade_point'] ?? 0;
 
-<th rowspan="2">G Total</th>
+                            $creditScore = $subjectData['credit_score'] ?? 0;
 
-</tr>
+                            $isFailed = $result !== '' && $result !== 'PASS';
+                        @endphp
 
-<tr>
+                        {{-- EXTERNAL MARKS --}}
+                        <td>
+                            {{ $external !== null ? number_format((float)$external, 2) : '' }}
+                        </td>
 
-@if($subject->type == "Theory")
+                        {{-- INTERNAL MARKS --}}
+                        <td>
+                            {{ $internal !== null ? number_format((float)$internal, 2) : '' }}
+                        </td>
 
-    <th>Mid Sem</th>
-    @if($courseTypeName !== "Diploma")
-    <th>Quiz</th>
-    @endif
-    <th>Grace</th>
-    <th>Final</th>
+                        {{-- TOTAL --}}
+                        <td>
+                            {{ $total !== null ? number_format((float)$total, 2) : '' }}
+                        </td>
 
-    <th>Mid Sem</th>
-    @if($courseTypeName !== "Diploma")
-    <th>Quiz</th>
-    @endif
-    <th>Final</th>
+                        {{-- GRADE / RESULT --}}
+                        <td class="{{ $isFailed ? 'failed-bg' : '' }}">
 
-@else
+                            @if($result !== '')
 
-    <th>Mid Sem</th>
-    @if($courseTypeName !== "Diploma")
-    <th>Quiz</th>
-    @endif
-    <th>Final</th>
+                                {{-- Grade column shows marks_grades.grade_name; result status is separate --}}
+                                {{ $grade !== '' ? $grade : $result }}
 
-    <th>Mid Sem</th>
-    @if($courseTypeName !== "Diploma")
-    <th>Quiz</th>
-    @endif
-    <th>Grace</th>
-    <th>Final</th>
+                                @if($result === 'PASS')
 
-@endif
+                                    <br>
 
-</tr>
+                                    <span class="mini-text">
+                                        {{ number_format((float)$percentage, 2) }}%
+                                    </span>
 
-<tr>
+                                    <br>
 
-@if($subject->type == "Theory")
+                                    <span class="mini-text">
+                                        {{ $gradePoint }}
+                                    </span>
 
-    <th>{{ number_format($theoryMidMax, 2) }}</th>
-    @if($courseTypeName !== "Diploma")
-    <th>{{ number_format($theoryQuizMax, 2) }}</th>
-    @endif
-    <th>-</th>
-    <th>{{ number_format($theoryFinalMax, 2) }}</th>
-    <th>{{ number_format($theoryTotalMax, 2) }}</th>
+                                    <br>
 
-    <th>{{ number_format($practicalMidMax, 2) }}</th>
-    @if($courseTypeName !== "Diploma")
-    <th>{{ number_format($practicalQuizMax, 2) }}</th>
-    @endif
-    <th>{{ number_format($practicalFinalMax, 2) }}</th>
-    <th>{{ number_format($practicalTotalMax, 2) }}</th>
+                                    <span class="mini-text">
+                                        {{ number_format((float)$creditScore, 2) }}
+                                    </span>
 
-@else
+                                @endif
 
-    <th>{{ number_format($theoryMidMax, 2) }}</th>
-    @if($courseTypeName !== "Diploma")
-    <th>{{ number_format($theoryQuizMax, 2) }}</th>
-    @endif
-    <th>{{ number_format($theoryFinalMax, 2) }}</th>
-    <th>{{ number_format($theoryTotalMax, 2) }}</th>
+                            @endif
 
-    <th>{{ number_format($practicalMidMax, 2) }}</th>
-    @if($courseTypeName !== "Diploma")
-    <th>{{ number_format($practicalQuizMax, 2) }}</th>
-    @endif
-    <th>-</th>
-    <th>{{ number_format($practicalFinalMax, 2) }}</th>
-    <th>{{ number_format($practicalTotalMax, 2) }}</th>
+                        </td>
 
-@endif
+                    @endforeach
 
-<th>{{ number_format($grandTotalMax, 2) }}</th>
+                    {{-- CURRENT RESULT --}}
+                    <td>
+                        {{ $studentResult['result'] ?? '' }}
+                    </td>
 
-</tr>
+                    {{-- CURRENT CREDIT --}}
+                    <td>
+                        {{ number_format((float)($studentResult['current_credit_point'] ?? 0), 2) }}
+                    </td>
 
-</thead>
+                    {{-- CURRENT GRADE POINT EARN --}}
+                    <td>
+                        {{ number_format((float)($studentResult['current_grade_point_earn'] ?? 0), 2) }}
+                    </td>
 
-<tbody>
-@php
-    $srNo = 1;
-@endphp
-@foreach($students as $key => $student)
+                    {{-- SGPA --}}
+                    <td>
+                        {{ number_format((float)($studentResult['sgpa'] ?? 0), 2) }}
+                    </td>
 
-@php
+                    {{-- PREVIOUS CREDIT --}}
+                    <td>
+                        {{ number_format((float)($studentResult['previous_credit_point'] ?? 0), 2) }}
+                    </td>
 
-    // ✅ Enrollment check
-    $isEnrolled = in_array($student->id, $studentSubjects);
+                    {{-- PREVIOUS GRADE POINT EARN --}}
+                    <td>
+                        {{ number_format((float)($studentResult['previous_grade_point_earn'] ?? 0), 2) }}
+                    </td>
 
-    // ✅ Marks existence check
-    $hasMid = isset($midSemMarks[$student->id]);
-    $hasEnd = isset($endSemMarks[$student->id]);
+                    {{-- CGPA --}}
+                    <td>
+                        {{ number_format((float)($studentResult['cgpa'] ?? 0), 2) }}
+                    </td>
 
-    $hasAnyMark = $hasMid || $hasEnd;
+                    {{-- PREVIOUS RESULT STATUS --}}
+                    <td>
+                        {{ $studentResult['previous_result_status'] ?? '' }}
+                    </td>
 
-@endphp
+                    {{-- REMARK --}}
+                    <td>
+                        {{ $studentResult['remark'] ?? '' }}
+                    </td>
 
-@if(!$isEnrolled)
-    @continue
-@endif
+                </tr>
 
-@if(!$isEnrolled || !$hasAnyMark)
+            @endforeach
 
-<tr>
-
-    <td>{{ $srNo++ }}</td>
-    <td class="student-name">{{ $student->student_name }}</td>
-    <td>{{ $student->university_roll_no }}</td>
-
-    <td>-</td>
-
-    @if($subject->type == "Theory")
-
-        <td>-</td>
-        @if($courseTypeName !== "Diploma")
-        <td>-</td>
-        @endif
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
-
-        <td>-</td>
-        @if($courseTypeName !== "Diploma")
-        <td>-</td>
-        @endif
-        <td>-</td>
-        <td>-</td>
-
-    @else
-
-        <td>-</td>
-        @if($courseTypeName !== "Diploma")
-        <td>-</td>
-        @endif
-        <td>-</td>
-        <td>-</td>
-
-        <td>-</td>
-        @if($courseTypeName !== "Diploma")
-        <td>-</td>
-        @endif
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
-
-    @endif
-
-    <td>-</td>
-
-</tr>
-
-@else
-
-@php
-
-/*
-=====================================
-COMMON MARKS
-=====================================
-*/
-
-$mid =
-    $midSemMarks[$student->id]['Mid-Sem'][0]->obtained_marks ?? 0;
-
-$quiz =
-    $midSemMarks[$student->id]['Quiz'][0]->obtained_marks ?? 0;
-
-$pracFromMid =
-    $midSemMarks[$student->id]['Practical'][0]->obtained_marks ?? 0;
-
-/*
-=====================================
-THEORY SUBJECT
-=====================================
-*/
-
-if ($subject->type == "Theory") {
-
-    // $endFinalOriginal =
-    //     $endSemMarks[$student->id]->obtained_marks ?? 0;
-
-    if ($courseTypeName == "Diploma") {
-
-        $endFinalOriginal =
-            $endSemMarks[$student->id]['external'][0]->obtained_marks ?? 0;
-
-    } else {
-
-        $endFinalOriginal =
-            $endSemMarks[$student->id]->obtained_marks ?? 0;
-    }
-
-    // $endFinalGrace =
-    //     $endSemMarks[$student->id]->grace_marks ?? 0;
-
-    if ($courseTypeName == "Diploma") {
-
-        $endFinalGrace =
-            $endSemMarks[$student->id]['external'][0]->grace_marks ?? 0;
-
-    } else {
-
-        $endFinalGrace =
-            $endSemMarks[$student->id]->grace_marks ?? 0;
-    }
-
-    $endFinalModeration =
-        $adjustmentMarks[$student->id]['external'] ?? 0;
-
-    $endFinal =
-        $endFinalOriginal
-        + $endFinalModeration;
-    /*
-    =====================================
-    THEORY
-    =====================================
-    */
-
-    $final = $endFinal;
-
-    $theoryGrace = $endFinalGrace;
-
-    $theoryTotal =
-        $mid
-        + $quiz
-        + $final
-        + $endFinalGrace;
-    /*
-    =====================================
-    PRACTICAL
-    =====================================
-    */
-
-    $practicalMid   = 0;
-    $practicalQuiz  = 0;
-
-    // $practicalFinal =
-    //     ($courseTypeName == "UG")
-    //         ? $pracFromMid
-    //         : $endFinal;
-
-    if ($courseTypeName == "Diploma") {
-
-        $practicalFinal =
-            $endSemMarks[$student->id]['practical'][0]->obtained_marks ?? 0;
-
-    } else {
-
-        // Existing UG Logic
-        $practicalFinal = $pracFromMid;
-    }
-
-    $practicalTotal = $practicalFinal;
-
-} else {
-
-    /*
-    =====================================
-    PRACTICAL SUBJECT
-    =====================================
-    */
-
-    $mid = $quiz = $final = 0;
-
-    $theoryTotal = 0;
-
-    /*
-    =====================================
-    PRACTICAL GRACE
-    =====================================
-    */
-
-    // $endFinalOriginal = $pracFromMid;
-
-    // $endFinalGrace =
-    //     $midSemMarks[$student->id]['Practical'][0]->grace_marks ?? 0;
-
-    if ($courseTypeName == "Diploma") {
-
-        $endFinalOriginal =
-            $endSemMarks[$student->id]['practical'][0]->obtained_marks ?? 0;
-
-        $endFinalGrace =
-            $endSemMarks[$student->id]['practical'][0]->grace_marks ?? 0;
-
-    } else {
-
-        // Existing UG Logic
-        $endFinalOriginal = $pracFromMid;
-
-        $endFinalGrace =
-            $midSemMarks[$student->id]['Practical'][0]->grace_marks ?? 0;
-    }
-
-    $endFinalModeration =
-        $adjustmentMarks[$student->id]['external'] ?? 0;
-
-    // $endFinal =
-    //     $endFinalOriginal
-    //     + $endFinalGrace
-    //     + $endFinalModeration;
-
-    $endFinal =
-        $endFinalOriginal
-        + $endFinalModeration;
-
-    /*
-    =====================================
-    PRACTICAL
-    =====================================
-    */
-
-    $practicalMid =
-        $midSemMarks[$student->id]['Mid-Sem'][0]->obtained_marks ?? 0;
-
-    $practicalQuiz =
-        $midSemMarks[$student->id]['Quiz'][0]->obtained_marks ?? 0;
-
-    $practicalGrace = $endFinalGrace;
-
-    $practicalFinal = $endFinal;
-
-    $practicalTotal =
-        $practicalMid
-        + $practicalQuiz
-        + $practicalFinal
-        + $endFinalGrace;
-}
-
-/*
-=====================================
-TOTAL
-=====================================
-*/
-
-$grandTotal = $theoryTotal + $practicalTotal;
-
-$cp = $grandTotal / 10;
-
-
-/*
-=====================================
-RESULT LOGIC
-=====================================
-*/
-
-if ($courseTypeName == 'Diploma') {
-
-    /*
-    =====================================
-    DIPLOMA RESULT LOGIC
-    =====================================
-    */
-
-    // if (
-
-    //     (
-    //         $subject->type == 'Theory'
-    //         &&
-    //         ($final == 0 || $practicalFinal == 0)
-    //     )
-
-    //     ||
-
-    //     (
-    //         $subject->type == 'Practical'
-    //         &&
-    //         $practicalFinal == 0
-    //     )
-
-    // ) {
-
-    //     $resultStatus = 'FAIL';
-    //     $resultColor  = 'red';
-
-    // } elseif ($grandTotal >= $requiredMarks) {
-
-    //     $resultStatus = 'PASS';
-    //     $resultColor  = 'green';
-
-    // } else {
-
-    //     $resultStatus = 'SUPPLE';
-    //     $resultColor  = 'orange';
-    // }
-    
-    // Check End Semester Exam Status
-    $isAbsent = false;
-
-    if ($subject->type == 'Theory') {
-
-        $externalExamStatus = strtolower(
-            trim(
-                (string) (
-                    $endSemMarks[$student->id]['external'][0]->exam_status ?? ''
-                )
-            )
-        );
-
-        $practicalExamStatus = strtolower(
-            trim(
-                (string) (
-                    $endSemMarks[$student->id]['practical'][0]->exam_status ?? ''
-                )
-            )
-        );
-
-        $isAbsent = (
-            $externalExamStatus == 'absent' ||
-            $practicalExamStatus == 'absent'
-        );
-
-    } else {
-
-        $practicalExamStatus = strtolower(
-            trim(
-                (string) (
-                    $endSemMarks[$student->id]['practical'][0]->exam_status ?? ''
-                )
-            )
-        );
-
-        $isAbsent = ($practicalExamStatus == 'absent');
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | RESULT STATUS
-    |--------------------------------------------------------------------------
-    */
-
-    if ($isAbsent) {
-
-        $resultStatus = 'FAIL';
-        $resultColor  = 'red';
-
-    } elseif ($grandTotal >= $requiredMarks) {
-
-        $resultStatus = 'PASS';
-        $resultColor  = 'green';
-
-    } else {
-
-        $resultStatus = 'SUPPLE';
-        $resultColor  = 'orange';
-    }
-
-} else {
-
-    if ($subject->type == "Practical") {
-
-        if ($grandTotal >= $requiredMarks) {
-
-            $resultStatus = 'PASS';
-            $resultColor  = 'green';
-
-        } else {
-
-            $resultStatus = 'FAIL';
-            $resultColor  = 'red';
-        }
-
-    } else {
-
-        $hasPractical = $practicalFinalMax > 0;
-
-        if (
-
-            //$practicalFinal > 0
-           // && $practicalFinal < $practicalMinMarks
-           $hasPractical && (
-                $practicalFinal == 0 ||
-                // (
-                //     $practicalFinal > 0
-                //     && $practicalFinal < $practicalMinMarks
-                // )
-                 $practicalFinal < $practicalMinMarks
-           )
-
-        ){
-            /*
-            =====================================
-            PRACTICAL FAIL
-            =====================================
-            */
-
-            $resultStatus = 'FAIL';
-            $resultColor  = 'red';
-
-        } elseif (
-
-            /*
-            =====================================
-            THEORY FINAL MUST BE >= MIN %
-            =====================================
-            */
-            $final < $theoryMinMarks
-
-        ) {
-
-            $resultStatus = 'FAIL';
-            $resultColor  = 'red';
-
-        } elseif (
-
-            /*
-            =====================================
-            THEORY TOTAL >= OVERALL %
-            =====================================
-            */
-            $theoryTotal >= $theoryTotalPassMarks
-
-        ) {
-
-            $resultStatus = 'PASS';
-            $resultColor  = 'green';
-
-        } else {
-
-            /*
-            =====================================
-            THEORY TOTAL < OVERALL %
-            BUT FINAL >= MIN %
-            =====================================
-            */
-
-            $resultStatus = 'SUPPLE';
-            $resultColor  = 'orange';
-        }
-    }
-}
-
-@endphp
-
-<tr>
-
-<td>{{ $srNo++ }}</td>
-
-<td class="student-name">
-    {{ $student->student_name }}
-</td>
-
-<td>{{ $student->university_roll_no }}</td>
-
-<td>
-
-@if($resultStatus == 'PASS')
-
-    <strong>{{ number_format($cp, 3) }}</strong>
-    <br>
-    <small class="no-export" style="color:green;">PASS</small>
-
-@else
-
-    <strong style="color:{{ $resultColor }}">
-        {{ $resultStatus }}
-    </strong>
-
-    <br>
-
-    <small class="no-export">{{ number_format($cp, 3) }}</small>
-
-@endif
-
-</td>
-
-@if($subject->type == "Theory")
-
-    {{-- THEORY SECTION --}}
-
-    <td>{{ number_format($mid, 2) }}</td>
-
-    @if($courseTypeName !== "Diploma")
-    <td>{{ number_format($quiz, 2) }}</td>
-    @endif
-
-    <td>{{ number_format($theoryGrace, 2) }}</td>
-
-    <td>
-
-        {{ number_format($final, 2) }}
-
-        <span class="no-export">
-        @if($endFinalModeration > 0)
-
-            <br>
-
-            <small>
-
-                ({{ number_format($endFinalOriginal, 2) }}
-                + {{ number_format($endFinalModeration, 2) }})
-
-            </small>
-
-        @endif
-        </span>
-
-    </td>
-
-    <td>
-        {{ number_format($theoryTotal, 2) }}
-        <span class="no-export">
-       @if($endFinalGrace > 0)
-
-            <br>
-
-            <small>
-
-                (+ {{ number_format($endFinalGrace, 2) }} Grace)
-
-            </small>
-
-        @endif
-        </span>
-
-    </td>
-
-    {{-- PRACTICAL SECTION --}}
-
-    <td>{{ number_format($practicalMid, 2) }}</td>
-
-    @if($courseTypeName !== "Diploma")
-    <td>{{ number_format($practicalQuiz, 2) }}</td>
-    @endif
-
-    <td>{{ number_format($practicalFinal, 2) }}</td>
-
-    <td>{{ number_format($practicalTotal, 2) }}</td>
-
-@else
-
-    {{-- THEORY SECTION --}}
-
-    <td>{{ number_format($mid, 2) }}</td>
-
-    @if($courseTypeName !== "Diploma")
-    <td>{{ number_format($quiz, 2) }}</td>
-    @endif
-
-    <td>{{ number_format($final, 2) }}</td>
-
-    <td>{{ number_format($theoryTotal, 2) }}</td>
-
-    {{-- PRACTICAL SECTION --}}
-
-    <td>{{ number_format($practicalMid, 2) }}</td>
-
-    @if($courseTypeName !== "Diploma")
-    <td>{{ number_format($practicalQuiz, 2) }}</td>
-    @endif
-
-    <td>{{ number_format($practicalGrace, 2) }}</td>
-
-    <td>
-
-        {{ number_format($practicalFinal, 2) }}
-        <span class="no-export">
-        @if($endFinalModeration > 0)
-
-            <br>
-
-            <small>
-
-                ({{ number_format($endFinalOriginal, 2) }}
-                + {{ number_format($endFinalModeration, 2) }})
-
-            </small>
-
-        @endif
-        </span>
-
-    </td>
-
-    <td>
-        {{ number_format($practicalTotal, 2) }}
-
-        <span class="no-export">
-        @if($endFinalGrace > 0)
-            <br>
-            <small>
-
-                (+ {{ number_format($endFinalGrace, 2) }} Grace)
-
-            </small>
-
-        @endif
-        </span>
-
-    </td>
-
-@endif
-
-<td>{{ number_format($grandTotal, 2) }}</td>
-
-</tr>
-
-@endif
-
-@endforeach
-
-</tbody>
-
-<tfoot>
-
-<tr>
-
-<td colspan="{{ ($course->course ?? '') == 'Diploma' ? 3 : 4 }}" class="align-left">
-
-    Prepared by
-
-    <br><br><br>
-
-    Checked by
-
-</td>
-
-<td colspan="4">
-    Controller of Examinations
-</td>
-
-<td colspan="{{ ($course->course ?? '') == 'Diploma' ? 5 : 6 }}" class="align-right">
-
-    Registrar, Guru Angad Dev Veterinary <br>
-    and Animal Science University
-
-</td>
-
-</tr>
-
-</tfoot>
-
-</table>
+        </tbody>
+    </table>
+</div>
