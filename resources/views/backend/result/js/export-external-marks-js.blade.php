@@ -94,7 +94,7 @@ $(document).ready(function () {
         $('#export_subject_id').html('<option>Please wait...</option>');
 
         $.ajax({
-            url: "{{ url('result/subjects/theory-paper/filter') }}",
+            url: "{{ url('result/subjects/filter') }}",
             type: "GET",
             data: {
                 course_type: courseType,

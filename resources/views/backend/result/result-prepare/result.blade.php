@@ -1,4 +1,3 @@
-
 <style>
     .result-sheet {
         width: 100%;
@@ -58,7 +57,54 @@
 </style>
 
 @php
-    $subjectCount = $subjects->count();
+    /*
+    |--------------------------------------------------------------------------
+    | FILTER SUBJECTS - ONLY ENROLLED SUBJECTS
+    |--------------------------------------------------------------------------
+    | Subject tabhi show hoga agar current Regular examination ke kisi student
+    | ne examination_form_choosed_subjects mein us subject ko choose kiya ho.
+    */
+
+    $studentIds = $students->pluck('id')->toArray();
+
+    $enrolledSubjectIds = \App\Models\ExaminationFormChoosedSubject::query()
+        ->join(
+            'examination_form',
+            'examination_form_choosed_subjects.examination_form_id',
+            '=',
+            'examination_form.id'
+        )
+        ->where('examination_form.exam_id', $exam->id)
+        ->where('examination_form.exam_type', 'Regular')
+        ->where('examination_form.payment_status', 1)
+        ->where('examination_form.course_id', $course->id)
+        ->where('examination_form.branch_id', $branch->id)
+        ->where('examination_form.scheme_id', $scheme->id)
+        ->where('examination_form.semester_id', $semester->id)
+        ->where('examination_form.batch_id', $batch->id)
+        ->whereIn('examination_form.student_id', $studentIds)
+
+        ->when(!empty($instituteId), function ($query) use ($instituteId) {
+            $query->where('examination_form.institute_id', $instituteId);
+        })
+
+        ->pluck('examination_form_choosed_subjects.subject_id')
+        ->unique()
+        ->values()
+        ->toArray();
+
+    // Only enrolled subjects
+    $filteredSubjects = $subjects->filter(function ($subject) use ($enrolledSubjectIds) {
+        return in_array($subject->id, $enrolledSubjectIds);
+    })->values();
+
+    /*
+    |--------------------------------------------------------------------------
+    | TABLE SETTINGS
+    |--------------------------------------------------------------------------
+    */
+
+    $subjectCount = $filteredSubjects->count();
 
     $totalColumns = 5 + ($subjectCount * 4) + 9;
 
@@ -77,6 +123,12 @@
     $schemeName = $scheme->name ?? '';
 
     $universityName = 'Himachal Pradesh Technical Univesity, Hamirpur';
+
+    // First Semester check
+    $isFirstSemester = strtoupper(trim($semester->name ?? '')) === 'I';
+
+    // Special grades/statuses
+    $specialGrades = ['AB', 'UMC', 'I/F', 'R', 'F'];
 @endphp
 
 <div class="result-sheet">
@@ -117,7 +169,7 @@
                     Name & Particular of Candidate
                 </th>
 
-                @foreach($subjects as $subject)
+                @foreach($filteredSubjects as $subject)
                     <th colspan="4">
                         {{ $subject->subject_code }}
                     </th>
@@ -180,7 +232,7 @@
             <tr>
                 <th rowspan="2" colspan="5"></th>
 
-                @foreach($subjects as $subject)
+                @foreach($filteredSubjects as $subject)
                     <th colspan="4">
                         {{ $subject->name }} - {{ $subject->type }}
                     </th>
@@ -189,7 +241,7 @@
 
             {{-- EXTERNAL / INTERNAL / TOTAL / GRADE --}}
             <tr>
-                @foreach($subjects as $subject)
+                @foreach($filteredSubjects as $subject)
                     <th>
                         <span class="vertical-text">External</span>
                     </th>
@@ -212,7 +264,7 @@
             <tr>
                 <th colspan="5"></th>
 
-                @foreach($subjects as $subject)
+                @foreach($filteredSubjects as $subject)
                     <th>{{ $subject->external_marks }}</th>
                     <th>{{ $subject->internal_marks }}</th>
                     <th>
@@ -226,7 +278,7 @@
             <tr>
                 <th colspan="5"></th>
 
-                @foreach($subjects as $subject)
+                @foreach($filteredSubjects as $subject)
                     @php
                         $passPercentage = \App\Models\PassPercentage::where('course_id', $course->id)
                             ->where('scheme_id', $scheme->id)
@@ -262,7 +314,7 @@
                 <th>Name</th>
                 <th>Father Name</th>
 
-                @foreach($subjects as $subject)
+                @foreach($filteredSubjects as $subject)
                     <th></th>
                     <th></th>
                     <th></th>
@@ -283,6 +335,30 @@
                     $studentSubjects = $studentResult['subjects'] ?? [];
 
                     $studentInstituteName = $institutes[$student->institute_id] ?? '';
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | FAILED SUBJECT CODES
+                    |--------------------------------------------------------------------------
+                    | Collect subject codes of failed subjects.
+                    | If no subject is failed, Current Result will show PASS.
+                    */
+
+                    $failedSubjectCodes = [];
+
+                    foreach ($filteredSubjects as $subject) {
+                        $subjectData = $studentSubjects[$subject->id] ?? null;
+
+                        $subjectResult = $subjectData['result'] ?? '';
+
+                        if ($subjectResult !== '' && $subjectResult !== 'PASS') {
+                            $failedSubjectCodes[] = $subject->subject_code;
+                        }
+                    }
+
+                    $currentResult = !empty($failedSubjectCodes)
+                        ? implode(', ', $failedSubjectCodes)
+                        : 'PASS';
                 @endphp
 
                 <tr>
@@ -310,7 +386,7 @@
                     </td>
 
                     {{-- SUBJECTS --}}
-                    @foreach($subjects as $subject)
+                    @foreach($filteredSubjects as $subject)
 
                         @php
                             $subjectData = $studentSubjects[$subject->id] ?? null;
@@ -332,6 +408,25 @@
                             $creditScore = $subjectData['credit_score'] ?? 0;
 
                             $isFailed = $result !== '' && $result !== 'PASS';
+
+                            /*
+                            |--------------------------------------------------------------------------
+                            | TOTAL DISPLAY
+                            |--------------------------------------------------------------------------
+                            | AB / UMC / I/F / R / F grade ho to Total mein status.
+                            | Otherwise numeric total display.
+                            */
+
+                            $totalDisplay = $total;
+
+                            if (in_array(strtoupper(trim((string)$grade)), $specialGrades)) {
+                                $totalDisplay = $grade;
+                            }
+
+                            $isSpecialTotal = in_array(
+                                strtoupper(trim((string)$totalDisplay)),
+                                $specialGrades
+                            );
                         @endphp
 
                         {{-- EXTERNAL MARKS --}}
@@ -346,7 +441,13 @@
 
                         {{-- TOTAL --}}
                         <td>
-                            {{ $total !== null ? number_format((float)$total, 2) : '' }}
+                            @if($totalDisplay !== null && $totalDisplay !== '')
+                                @if(in_array(strtoupper(trim((string)$totalDisplay)), $specialGrades))
+                                    {{ $totalDisplay }}
+                                @else
+                                    {{ number_format((float)$totalDisplay, 2) }}
+                                @endif
+                            @endif
                         </td>
 
                         {{-- GRADE / RESULT --}}
@@ -354,7 +455,6 @@
 
                             @if($result !== '')
 
-                                {{-- Grade column shows marks_grades.grade_name; result status is separate --}}
                                 {{ $grade !== '' ? $grade : $result }}
 
                                 @if($result === 'PASS')
@@ -387,7 +487,7 @@
 
                     {{-- CURRENT RESULT --}}
                     <td>
-                        {{ $studentResult['result'] ?? '' }}
+                        {{ $currentResult }}
                     </td>
 
                     {{-- CURRENT CREDIT --}}
@@ -422,7 +522,9 @@
 
                     {{-- PREVIOUS RESULT STATUS --}}
                     <td>
-                        {{ $studentResult['previous_result_status'] ?? '' }}
+                        @if(!$isFirstSemester)
+                            {{ $studentResult['previous_result_status'] ?? '' }}
+                        @endif
                     </td>
 
                     {{-- REMARK --}}

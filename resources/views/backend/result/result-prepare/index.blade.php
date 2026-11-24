@@ -22,7 +22,7 @@
             </div>
             <div class="card-body">
                 <div id="endSemMarksResult"></div>
-                {{-- @include('backend.result.result-prepare.result') --}}
+                {{-- @include('backend.result.result-prepare.result-structure') --}}
             </div>
         </div>
     </div>

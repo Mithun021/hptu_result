@@ -1071,8 +1071,7 @@ class ResultController extends Controller
         }
     }
 
-
-    public function export(Request $request)
+    public function exportInternal(Request $request)
     {
         /**
          * =========================
@@ -1131,6 +1130,10 @@ class ResultController extends Controller
             ->where('branch_id', $branch_id)
             ->where('batch_id', $batch_id)
 
+            ->when($exam, function ($q) use ($exam) {
+                $q->where('exam_id', $exam->exam_id);
+            })
+
             ->when(
                 $institute_id,
                 fn($q) => $q->where('institute_id', $institute_id)
@@ -1156,7 +1159,6 @@ class ResultController extends Controller
             ->whereHas('choosedSubjects', function ($q) use ($subject_id) {
                 $q->where('subject_id', $subject_id);
             });
-
 
         /**
          * =========================
@@ -1191,11 +1193,11 @@ class ResultController extends Controller
                 fn($q) => $q->where('scheme_id', $scheme_id)
             )
 
-            ->when(
-                $course_type === 'Semester Based',
-                fn($q) => $q->where('semester_id', $semester_id),
-                fn($q) => $q->where('annual_semester_id', $annual_semester_id)
-            )
+            // ->when(
+            //     $course_type === 'Semester Based',
+            //     fn($q) => $q->where('semester_id', $semester_id),
+            //     fn($q) => $q->where('annual_semester_id', $annual_semester_id)
+            // )
 
             ->orderByRaw("
                 CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(university_roll_no, '-', 2), '-', -1) AS UNSIGNED) ASC,
@@ -1343,8 +1345,7 @@ class ResultController extends Controller
 
         return new StreamedResponse($callback, 200, $headers);
     }
-
-    public function import(Request $request)
+    public function importInternal(Request $request)
     {
         $request->validate([
             'file' => 'required|file|mimes:csv,txt|max:4096',
@@ -2073,12 +2074,12 @@ class ResultController extends Controller
             ->when($institute_id, function ($q) use ($institute_id) {
                 $q->where('institute_id', $institute_id);
             })
-            ->when($course_type == 'Semester Based', function ($q) use ($semester_id) {
-                $q->where('semester_id', $semester_id);
-            })
-            ->when($course_type == 'Annual Based', function ($q) use ($annual_semester_id) {
-                $q->where('annual_semester_id', $annual_semester_id);
-            })
+            // ->when($course_type == 'Semester Based', function ($q) use ($semester_id) {
+            //     $q->where('semester_id', $semester_id);
+            // })
+            // ->when($course_type == 'Annual Based', function ($q) use ($annual_semester_id) {
+            //     $q->where('annual_semester_id', $annual_semester_id);
+            // })
             ->orderBy('student_name')
             ->get();
 
@@ -2181,8 +2182,6 @@ class ResultController extends Controller
 
         return response()->stream($callback, 200, $headers);
     }
-
-
     public function importExternalMarks(Request $request)
     {
         $request->validate([
@@ -3882,131 +3881,73 @@ class ResultController extends Controller
 
     public function fetchEndSemResult(Request $request)
     {
-        $request->validate([
-            'exam_id'      => 'required|exists:exams,id',
-            'course_type'   => 'required|in:Semester Based',
-            'course_id'    => 'required|exists:courses,id',
-            'scheme_id'    => 'required|exists:schemes,id',
-            'branch_id'    => 'required|exists:branches,id',
-            'semester_id'  => 'required|exists:semesters,id',
-            'batch_id'     => 'required|exists:batches,id',
-            'institute_id' => 'nullable',
-        ]);
-
-        /* =========================================================
-        1. FETCH MASTER DATA
-        ========================================================= */
-
         $examId       = (int) $request->exam_id;
         $courseType   = $request->course_type;
         $courseId     = (int) $request->course_id;
-        $schemeId     = (int) $request->scheme_id;
+        $schemeId     = $request->scheme_id ? (int) $request->scheme_id : null;
         $branchId     = (int) $request->branch_id;
         $semesterId   = (int) $request->semester_id;
-        $batchId      = (int) $request->batch_id;
-        $instituteId  = $request->institute_id;
+        $batchId     = (int) $request->batch_id;
+        $instituteId = $request->institute_id !== null
+            && $request->institute_id !== ''
+            ? (int) $request->institute_id
+            : null;
 
-        $exam = Exam::findOrFail($examId);
-
-        $course = \App\Models\Course::findOrFail($courseId);
-
-        $scheme = \App\Models\Scheme::findOrFail($schemeId);
-
-        $branch = \App\Models\Branch::findOrFail($branchId);
-
-        $batch = \App\Models\Batch::findOrFail($batchId);
-
-        $semester = \App\Models\Semester::findOrFail($semesterId);
-
-        $className = $semester->name ?? '';
-
-        /* =========================================================
-        2. PASS PERCENTAGE
-        Course + Scheme based
-        ========================================================= */
-
-        $passPercentage = \App\Models\PassPercentage::where(
-            'course_id',
-            $courseId
-        )
-        ->where('scheme_id', $schemeId)
-        ->first();
-
-        if (!$passPercentage) {
-            return '<div class="alert alert-danger">
-                        Pass percentage configuration not found.
-                    </div>';
+        if ($courseType !== 'Semester Based') {
+            return response('Only Semester Based result is supported.', 422);
         }
 
-        $passPercent = (float) $passPercentage->overall_pass_percentage;
+        /*
+        |--------------------------------------------------------------------------
+        | BASIC DATA
+        |--------------------------------------------------------------------------
+        */
 
-        $percentageType = strtolower(
-            trim($passPercentage->percentage_type)
-        );
+        $exam   = \App\Models\Exam::findOrFail($examId);
+        $course = \App\Models\Course::findOrFail($courseId);
+        $branch = \App\Models\Branch::findOrFail($branchId);
+        $scheme = \App\Models\Scheme::findOrFail($schemeId);
+        $batch  = \App\Models\Batch::findOrFail($batchId);
+        $semester = \App\Models\Semester::findOrFail($semesterId);
 
-        /* =========================================================
-        3. FETCH SUBJECTS
-        ========================================================= */
+        $className = ($semester->name ?? '') . ' Semester';
 
-        $subjects = Subject::where('course_type', $courseType)
-            ->where('course_id', $courseId)
+        /*
+        |--------------------------------------------------------------------------
+        | PASS PERCENTAGE
+        |--------------------------------------------------------------------------
+        */
+
+        $passPercentage = \App\Models\PassPercentage::where('course_id', $courseId)
             ->where('scheme_id', $schemeId)
+            ->first();
+
+        $overallPassPercent = (float) ($passPercentage->overall_pass_percentage ?? 40);
+        $percentageType = $passPercentage->percentage_type ?? 'Separate';
+
+        /*
+        |--------------------------------------------------------------------------
+        | SUBJECTS
+        |--------------------------------------------------------------------------
+        */
+
+        $subjects = \App\Models\Subject::where('course_type', $courseType)
+            ->where('course_id', $courseId)
             ->where('branch_id', $branchId)
+            ->where('scheme_id', $schemeId)
             ->where('semester_id', $semesterId)
+            ->whereNull('annual_semester_id')
             ->orderBy('orders')
             ->orderBy('id')
             ->get();
 
-        if ($subjects->isEmpty()) {
-            return '<div class="alert alert-warning">
-                        No subjects found.
-                    </div>';
-        }
+        $subjectIds = $subjects->pluck('id')->toArray();
 
-        /* =========================================================
-        4. FETCH STUDENTS
-        Institute filter ONLY here
-        ========================================================= */
-
-        $studentQuery = DB::table('students')
-            ->where('course_type', $courseType)
-            ->where('course_id', $courseId)
-            ->where('scheme_id', $schemeId)
-            ->where('branch_id', $branchId)
-            ->where('batch_id', $batchId);
-
-        if (!empty($instituteId)) {
-            $studentQuery->where('institute_id', $instituteId);
-        }
-
-        $students = $studentQuery
-            ->orderBy('university_roll_no')
-            ->get();
-
-        if ($students->isEmpty()) {
-            return '<div class="alert alert-warning">
-                        No students found for the selected filters.
-                    </div>';
-        }
-
-        /* =========================================================
-        5. INSTITUTE MAP
-        ========================================================= */
-
-        $instituteIds = $students
-            ->pluck('institute_id')
-            ->filter()
-            ->unique()
-            ->values();
-
-        $institutes = DB::table('institutes')
-            ->whereIn('id', $instituteIds)
-            ->pluck('name', 'id');
-
-        /* =========================================================
-        6. GRADE CONFIGURATION
-        Course + Scheme based
-        ========================================================= */
+        /*
+        |--------------------------------------------------------------------------
+        | GRADES
+        |--------------------------------------------------------------------------
+        */
 
         $grades = \App\Models\MarksGrade::where('course_id', $courseId)
             ->where('scheme_id', $schemeId)
@@ -4014,112 +3955,229 @@ class ResultController extends Controller
             ->get();
 
         /*
-        Find grade according to earned percentage.
+        |--------------------------------------------------------------------------
+        | STUDENTS - REGULAR EXAM FORMS
+        |--------------------------------------------------------------------------
+        */
+
+        $forms = \App\Models\ExaminationForm::with([
+            'student',
+            'choosedSubjects',
+        ])
+            ->where('exam_id', $examId)
+            ->where('exam_type', 'Regular')
+            ->where('course_id', $courseId)
+            ->where('branch_id', $branchId)
+            ->where('scheme_id', $schemeId)
+            ->where('semester_id', $semesterId)
+            ->where('batch_id', $batchId)
+            ->where('payment_status', 1)
+            ->when($instituteId !== null, function ($q) use ($instituteId) {
+                $q->where('institute_id', $instituteId);
+            })
+            ->get()
+            ->filter(function ($form) use ($subjectIds) {
+                return $form->student
+                    && $form->choosedSubjects->pluck('subject_id')
+                        ->intersect($subjectIds)
+                        ->isNotEmpty();
+            })
+            ->unique('student_id')
+            ->values();
+
+        $students = $forms->pluck('student')
+            ->filter()
+            ->unique('id')
+            ->sortBy('university_roll_no')
+            ->values();
+
+        /*
+        |--------------------------------------------------------------------------
+        | INSTITUTES
+        |--------------------------------------------------------------------------
+        */
+
+        $institutes = \App\Models\Institute::whereIn(
+            'id',
+            $students->pluck('institute_id')->filter()->unique()
+        )->pluck('name', 'id');
+
+        /*
+        |--------------------------------------------------------------------------
+        | CURRENT INTERNAL MARKS
+        |--------------------------------------------------------------------------
+        */
+
+        $midSemMarks = \App\Models\MidSemMark::where('exam_id', $examId)
+            ->where('course_type', $courseType)
+            ->where('course_id', $courseId)
+            ->where('branch_id', $branchId)
+            ->where('scheme_id', $schemeId)
+            ->where('semester_id', $semesterId)
+            ->where('batch_id', $batchId)
+            ->where('marks_type', 'internal')
+            ->whereIn('student_id', $students->pluck('id'))
+            ->whereIn('subject_id', $subjectIds)
+            ->get()
+            ->groupBy('student_id');
+
+        /*
+        |--------------------------------------------------------------------------
+        | CURRENT EXTERNAL MARKS
+        |--------------------------------------------------------------------------
+        */
+
+        $endSemMarks = \App\Models\EndSemMark::where('exam_id', $examId)
+            ->where('course_type', $courseType)
+            ->where('course_id', $courseId)
+            ->where('branch_id', $branchId)
+            ->where('scheme_id', $schemeId)
+            ->where('semester_id', $semesterId)
+            ->where('batch_id', $batchId)
+            ->where('marks_type', 'external')
+            ->whereIn('student_id', $students->pluck('id'))
+            ->whereIn('subject_id', $subjectIds)
+            ->get()
+            ->groupBy('student_id');
+
+        /*
+        |--------------------------------------------------------------------------
+        | PREVIOUS SEMESTERS - REGULAR + REAPPEAR
+        |--------------------------------------------------------------------------
+        */
+
+        $previousGpSheets = collect();
+        $previousReappearGpSheets = collect();
+
+        $previousExamIds = getPreviousExamSessionIds($examId);
+
+        // Reappear result can also be uploaded in the current exam session.
+        $reappearExamIds = array_values(array_unique(
+            array_merge($previousExamIds, [$examId])
+        ));
+
+        $previousSemesters = $semesterId > 1
+            ? range(1, $semesterId - 1)
+            : [];
+
+        if (!empty($previousSemesters)) {
+
+            $previousGpSheets = \App\Models\ResultGpSheet::where('course_type', $courseType)
+                ->where('course_id', $courseId)
+                ->where('branch_id', $branchId)
+                ->where('scheme_id', $schemeId)
+                ->where('batch_id', $batchId)
+                ->whereIn('semester_id', $previousSemesters)
+                ->whereIn('exam_id', $previousExamIds)
+                ->when($instituteId !== null, function ($q) use ($instituteId) {
+                    $q->where('institute_id', $instituteId);
+                })
+                ->get()
+                ->groupBy('student_id');
+
+            $previousReappearGpSheets = \App\Models\ReappearResultGpSheet::where('course_type', $courseType)
+                ->where('course_id', $courseId)
+                ->where('branch_id', $branchId)
+                ->where('scheme_id', $schemeId)
+                ->where('batch_id', $batchId)
+                ->whereIn('semester_id', $previousSemesters)
+                ->whereIn('exam_id', $reappearExamIds)
+                ->when($instituteId !== null, function ($q) use ($instituteId) {
+                    $q->where('institute_id', $instituteId);
+                })
+                ->get()
+                ->groupBy('student_id');
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | HELPER: GET GRADE BY PERCENTAGE
+        |--------------------------------------------------------------------------
         */
 
         $getGrade = function ($percentage) use ($grades) {
 
             return $grades->first(function ($grade) use ($percentage) {
-
                 return $percentage >= (float) $grade->percent_from
                     && $percentage <= (float) $grade->percent_upto;
-
             });
         };
 
-        /* =========================================================
-        7. EXAM SESSION ORDER
-        Current exam + chronological previous sessions
-        Helper IDs are chronological, not primary-key order.
-        ========================================================= */
-
-        $previousExamIds = getPreviousExamSessionIds($examId);
-
-        $examSessionIds = array_values(array_unique(
-            array_merge($previousExamIds, [$examId])
-        ));
-
         /*
-        Build chronological rank map.
-        Higher rank = newer exam session.
+        |--------------------------------------------------------------------------
+        | HELPER: MARK VALUE
+        |--------------------------------------------------------------------------
         */
 
-        $sessionRank = [];
+        $markValue = function ($mark) {
 
-        foreach ($examSessionIds as $index => $sessionId) {
-            $sessionRank[$sessionId] = $index;
-        }
+            if (!$mark) {
+                return null;
+            }
 
-        /* =========================================================
-        8. PREVIOUS SEMESTERS
-        ========================================================= */
+            if (strtolower(trim($mark->exam_status ?? '')) !== 'present') {
+                return 0;
+            }
+
+            return (float) ($mark->obtained_marks ?? 0)
+                + (float) ($mark->grace_marks ?? 0);
+        };
 
         /*
-        Assumption:
-        semester IDs are in semester sequence order.
-        Previous semesters = IDs lower than current semester ID.
+        |--------------------------------------------------------------------------
+        | HELPER: SPECIAL STATUS
+        |--------------------------------------------------------------------------
         */
 
-        $previousSemesterIds = \App\Models\Semester::where('id', '<', $semesterId)
-            ->orderBy('id')
-            ->pluck('id')
-            ->toArray();
+        $specialStatus = function ($mark) {
 
-        /* =========================================================
-        9. RESULT COLLECTIONS
-        ========================================================= */
+            if (!$mark) {
+                return '';
+            }
+
+            $status = strtoupper(trim($mark->exam_status ?? ''));
+
+            if (in_array($status, ['AB', 'UMC', 'I/F'])) {
+                return $status;
+            }
+
+            return '';
+        };
+
+        /*
+        |--------------------------------------------------------------------------
+        | HELPER: RETOTALING VALUE
+        |--------------------------------------------------------------------------
+        */
+
+        $retotalValue = function ($normal, $retotal) {
+
+            if ($retotal !== null && $retotal !== '' && (float) $retotal != 0) {
+                return (float) $retotal;
+            }
+
+            return (float) ($normal ?? 0);
+        };
+
+        /*
+        |--------------------------------------------------------------------------
+        | PREPARE RESULT DATA
+        |--------------------------------------------------------------------------
+        */
 
         $marks = [];
-        $examFormSubjects = [];
-
-        /* =========================================================
-        10. PROCESS STUDENTS
-        ========================================================= */
 
         foreach ($students as $student) {
 
             $studentId = $student->id;
 
-            /*
-            * Every marks / result query will use student's own institute.
-            */
+            $studentInternal = $midSemMarks->get($studentId, collect())
+                ->keyBy('subject_id');
 
-            $studentInstituteId = $student->institute_id;
+            $studentExternal = $endSemMarks->get($studentId, collect())
+                ->keyBy('subject_id');
 
-            /* -----------------------------------------------------
-            Examination Form / Subject Selection
-            ----------------------------------------------------- */
-
-            $examinationForm = \App\Models\ExaminationForm::where([
-                'exam_id'       => $examId,
-                'student_id'    => $studentId,
-                'course_id'     => $courseId,
-                'scheme_id'     => $schemeId,
-                'branch_id'     => $branchId,
-                'semester_id'   => $semesterId,
-                'batch_id'      => $batchId,
-                'institute_id'  => $studentInstituteId,
-            ])->first();
-
-            $selectedSubjectIds = collect();
-
-            if ($examinationForm) {
-
-                $selectedSubjectIds = DB::table(
-                    'examination_form_choosed_subjects'
-                )
-                ->where('examination_form_id', $examinationForm->id)
-                ->pluck('subject_id');
-
-            }
-
-            $examFormSubjects[$studentId] = $selectedSubjectIds;
-
-            /* -----------------------------------------------------
-            STUDENT CURRENT RESULT
-            ----------------------------------------------------- */
-
-            $studentSubjectMarks = [];
+            $studentSubjects = [];
 
             $currentCreditPoint = 0;
             $currentGradePointEarn = 0;
@@ -4128,680 +4186,359 @@ class ResultController extends Controller
 
             foreach ($subjects as $subject) {
 
-                /*
-                * If examination form exists and subject was not selected,
-                * skip the subject for this student.
-                *
-                * If no examination form exists, use all configured subjects.
-                */
+                $internalRecord = $studentInternal->get($subject->id);
+                $externalRecord = $studentExternal->get($subject->id);
 
-                if (
-                    $examinationForm
-                    && !$selectedSubjectIds->contains($subject->id)
-                ) {
+                $hasInternal = !is_null($internalRecord);
+                $hasExternal = !is_null($externalRecord);
+
+                // Both missing -> leave blank, not included in credit calculation.
+                if (!$hasInternal && !$hasExternal) {
                     continue;
                 }
 
-                /* ================================================
-                FETCH INTERNAL MARKS
-                ================================================ */
+                $credits = (float) ($subject->credits ?? 0);
 
-                $internalMark = MidSemMark::where([
-                    'exam_id'         => $examId,
-                    'student_id'      => $studentId,
-                    'subject_id'      => $subject->id,
-                    'institute_id'    => $studentInstituteId,
-                    'course_type'     => $courseType,
-                    'course_id'      => $courseId,
-                    'branch_id'      => $branchId,
-                    'batch_id'       => $batchId,
-                    'semester_id'    => $semesterId,
-                    'scheme_id'      => $schemeId,
-                    'marks_type'     => 'internal',
-                ])->first();
+                $internalValue = $markValue($internalRecord);
+                $externalValue = $markValue($externalRecord);
 
-                /* ================================================
-                FETCH EXTERNAL MARKS
-                ================================================ */
+                $internalSpecial = $specialStatus($internalRecord);
+                $externalSpecial = $specialStatus($externalRecord);
 
-                $externalMark = EndSemMark::where([
-                    'exam_id'         => $examId,
-                    'student_id'      => $studentId,
-                    'subject_id'      => $subject->id,
-                    'institute_id'    => $studentInstituteId,
-                    'course_type'     => $courseType,
-                    'course_id'      => $courseId,
-                    'branch_id'      => $branchId,
-                    'batch_id'       => $batchId,
-                    'semester_id'    => $semesterId,
-                    'scheme_id'      => $schemeId,
-                    'marks_type'     => 'external',
-                ])->first();
-
-                /* ================================================
-                RAW MARKS + STATUS
-                ================================================ */
-
-                $internalStatus = strtoupper(
-                    trim($internalMark->exam_status ?? '')
-                );
-
-                $externalStatus = strtoupper(
-                    trim($externalMark->exam_status ?? '')
-                );
-
-                $internalPresent = strtolower(
-                    trim($internalMark->exam_status ?? '')
-                ) === 'present';
-
-                $externalPresent = strtolower(
-                    trim($externalMark->exam_status ?? '')
-                ) === 'present';
-
-                $internalObtained = $internalMark
-                    ? $internalMark->obtained_marks
-                    : null;
-
-                $externalObtained = $externalMark
-                    ? $externalMark->obtained_marks
-                    : null;
-
-                $internalGrace = (float) (
-                    $internalMark->grace_marks ?? 0
-                );
-
-                $externalGrace = (float) (
-                    $externalMark->grace_marks ?? 0
-                );
-
-                $internalRaw = (
-                    $internalObtained !== null
-                    && $internalPresent
-                )
-                    ? (float) $internalObtained + $internalGrace
-                    : null;
-
-                $externalRaw = (
-                    $externalObtained !== null
-                    && $externalPresent
-                )
-                    ? (float) $externalObtained + $externalGrace
-                    : null;
-
-                /* ================================================
-                SPECIAL RESULT CONDITIONS
-                These must be checked BEFORE pass calculation.
-                ================================================ */
-
-                $subjectTotal = null;
-                $subjectResult = '';
-                $percentage = null;
-                $gradeName = '';
+                $total = null;
+                $percentage = 0;
+                $grade = '';
                 $gradePoint = 0;
                 $creditScore = 0;
+                $result = 'FAIL';
 
                 /*
-                * Both obtained marks are empty.
+                |--------------------------------------------------------------------------
+                | EXTERNAL SPECIAL STATUS - HIGHEST PRIORITY
+                |--------------------------------------------------------------------------
                 */
 
-                if (
-                    $internalObtained === null
-                    && $externalObtained === null
+                if ($externalSpecial !== '') {
+
+                    $total = $externalSpecial;
+                    $grade = $externalSpecial;
+                    $result = $externalSpecial;
+
+                } elseif (!$hasInternal || !$hasExternal) {
+
+                    // Only one mark component exists -> R.
+                    $total = 0;
+                    $grade = 'R';
+                    $result = 'R';
+
+                } elseif (
+                    $internalSpecial !== ''
+                    && $externalSpecial !== ''
+                    && $internalSpecial === $externalSpecial
                 ) {
 
-                    $subjectTotal = null;
-                    $subjectResult = '';
+                    $total = $externalSpecial;
+                    $grade = $externalSpecial;
+                    $result = $externalSpecial;
 
-                }
+                } elseif ($percentageType === 'Aggregate') {
 
-                /*
-                * Both absent.
-                */
+                    $total = (float) $internalValue + (float) $externalValue;
 
-                elseif (
-                    $internalStatus === 'ABSENT'
-                    && $externalStatus === 'ABSENT'
-                ) {
+                    $maximum = (float) ($subject->internal_marks ?? 0)
+                        + (float) ($subject->external_marks ?? 0);
 
-                    $subjectTotal = 0;
-                    $subjectResult = 'AB';
-
-                }
-
-                /*
-                * Both UMC.
-                */
-
-                elseif (
-                    $internalStatus === 'UMC'
-                    && $externalStatus === 'UMC'
-                ) {
-
-                    $subjectTotal = 0;
-                    $subjectResult = 'UMC';
-
-                }
-
-                /*
-                * Both I/F.
-                */
-
-                elseif (
-                    $internalStatus === 'I/F'
-                    && $externalStatus === 'I/F'
-                ) {
-
-                    $subjectTotal = 0;
-                    $subjectResult = 'I/F';
-
-                }
-
-                /*
-                * One mark missing and other available.
-                */
-
-                elseif (
-                    $internalObtained === null
-                    || $externalObtained === null
-                ) {
-
-                    $subjectTotal = 0;
-                    $subjectResult = 'R';
-
-                }
-
-                /*
-                * Marks exist, but one/both exam statuses are not Present.
-                */
-
-                elseif (
-                    !$internalPresent
-                    || !$externalPresent
-                ) {
-
-                    $subjectTotal = 0;
-
-                    $subjectResult = (
-                        $internalStatus === $externalStatus
-                        && in_array($internalStatus, ['AB', 'ABSENT', 'UMC', 'I/F'])
-                    )
-                        ? $internalStatus
-                        : 'R';
-
-                }
-
-                /* ================================================
-                NORMAL MARKS CALCULATION
-                ================================================ */
-
-                else {
-
-                    $internalTotal = $internalRaw;
-                    $externalTotal = $externalRaw;
-
-                    $subjectTotal = $internalTotal + $externalTotal;
-
-                    $maximumMarks = (float) $subject->internal_marks
-                        + (float) $subject->external_marks;
-
-                    $percentage = $maximumMarks > 0
-                        ? ($subjectTotal * 100) / $maximumMarks
+                    $percentage = $maximum > 0
+                        ? ($total * 100) / $maximum
                         : 0;
 
-                    /* ============================================
-                    AGGREGATE PASSING
-                    ============================================ */
+                    $matchedGrade = $getGrade($percentage);
 
-                    if ($percentageType === 'aggregate') {
-
-                        if ($percentage >= $passPercent) {
-
-                            $grade = $getGrade($percentage);
-
-                            $subjectResult = 'PASS';
-
-                            $gradeName = $grade->grade_name ?? '';
-                            $gradePoint = (float) ($grade->grade_point ?? 0);
-
-                            $creditScore = (float) $subject->credits
-                                * $gradePoint;
-
-                        } else {
-
-                            $subjectResult = 'FAIL';
-
-                        }
-
-                    }
-
-                    /* ============================================
-                    SEPARATE PASSING
-                    ============================================ */
-
-                    elseif ($percentageType === 'separate') {
-
-                        $internalPassMarks = (
-                            (float) $subject->internal_marks
-                            * $passPercent
-                        ) / 100;
-
-                        $externalPassMarks = (
-                            (float) $subject->external_marks
-                            * $passPercent
-                        ) / 100;
-
-                        $internalPassed = $internalTotal >= $internalPassMarks;
-                        $externalPassed = $externalTotal >= $externalPassMarks;
-
-                        if ($externalPassed && !$internalPassed) {
-
-                            $subjectResult = 'I';
-
-                        } elseif (!$externalPassed && $internalPassed) {
-
-                            $subjectResult = 'R';
-
-                        } elseif (!$externalPassed && !$internalPassed) {
-
-                            $subjectResult = 'I/F';
-
-                        } else {
-
-                            $subjectResult = 'PASS';
-
-                            $grade = $getGrade($percentage);
-
-                            $gradeName = $grade->grade_name ?? '';
-                            $gradePoint = (float) ($grade->grade_point ?? 0);
-
-                            $creditScore = (float) $subject->credits
-                                * $gradePoint;
-
-                        }
-
+                    if ($percentage < $overallPassPercent || !$matchedGrade) {
+                        $grade = 'R';
+                        $result = 'FAIL';
                     } else {
-
-                        $subjectResult = 'FAIL';
-
+                        $grade = $matchedGrade->grade_name;
+                        $gradePoint = (float) $matchedGrade->grade_point;
+                        $result = 'PASS';
                     }
 
+                } else {
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | SEPARATE PASS
+                    |--------------------------------------------------------------------------
+                    */
+
+                    $total = (float) $internalValue + (float) $externalValue;
+
+                    $internalPass = (float) ($subject->internal_marks ?? 0)
+                        * $overallPassPercent / 100;
+
+                    $externalPass = (float) ($subject->external_marks ?? 0)
+                        * $overallPassPercent / 100;
+
+                    $internalPassed = $internalValue >= $internalPass;
+                    $externalPassed = $externalValue >= $externalPass;
+
+                    $maximum = (float) ($subject->internal_marks ?? 0)
+                        + (float) ($subject->external_marks ?? 0);
+
+                    $percentage = $maximum > 0
+                        ? ($total * 100) / $maximum
+                        : 0;
+
+                    $matchedGrade = $getGrade($percentage);
+
+                    if (!$externalPassed && !$internalPassed) {
+                        $grade = 'I/F';
+                        $result = 'FAIL';
+                    } elseif (!$externalPassed && $internalPassed) {
+                        $grade = 'R';
+                        $result = 'FAIL';
+                    } elseif ($externalPassed && !$internalPassed) {
+                        $grade = 'I';
+                        $result = 'FAIL';
+                    } else {
+                        $grade = $matchedGrade->grade_name ?? 'R';
+                        $gradePoint = (float) ($matchedGrade->grade_point ?? 0);
+                        $result = ($grade === 'R' || $grade === 'F')
+                            ? 'FAIL'
+                            : 'PASS';
+                    }
                 }
 
-                /* ================================================
-                FAILED SUBJECT LIST
-                Any result other than PASS is failed.
-                ================================================ */
+                /*
+                |--------------------------------------------------------------------------
+                | SPECIAL INTERNAL STATUS FALLBACK
+                |--------------------------------------------------------------------------
+                */
 
-                if (
-                    $subjectResult !== 'PASS'
-                    && $subjectResult !== ''
-                ) {
+                if ($externalSpecial === '' && $internalSpecial !== '' && $result !== 'PASS') {
+                    $total = $internalSpecial;
+                    $grade = $internalSpecial;
+                    $result = $internalSpecial;
+                    $gradePoint = 0;
+                    $percentage = 0;
+                }
+
+                /*
+                |--------------------------------------------------------------------------
+                | R / F GRADE POINT
+                |--------------------------------------------------------------------------
+                */
+
+                if (in_array($grade, ['R', 'F', 'AB', 'UMC', 'I/F', 'I'])) {
+                    $gradePoint = 0;
+                }
+
+                if ($result !== 'PASS') {
+                    $gradePoint = 0;
+                }
+
+                $creditScore = $gradePoint * $credits;
+
+                // Any existing mark record counts credits, including failures.
+                $currentCreditPoint += $credits;
+                $currentGradePointEarn += $creditScore;
+
+                if ($result !== 'PASS') {
                     $failedSubjects[] = $subject->subject_code;
                 }
 
-                /* ================================================
-                CREDIT / GRADE POINT
-                ================================================ */
-
-                if ($subjectResult === 'PASS') {
-
-                    $currentCreditPoint += (float) $subject->credits;
-
-                    $currentGradePointEarn += $creditScore;
-
-                }
-
-                /* ================================================
-                SUBJECT DATA
-                ================================================ */
-
-                $studentSubjectMarks[$subject->id] = [
-
-                    'subject' => $subject,
-
-                    'internal' => $internalMark,
-
-                    'external' => $externalMark,
-
-                    'internal_marks' => $internalRaw,
-
-                    'external_marks' => $externalRaw,
-
-                    'total' => $subjectTotal,
-
+                $studentSubjects[$subject->id] = [
+                    'internal_marks' => $internalSpecial ?: $internalValue,
+                    'external_marks' => $externalSpecial ?: $externalValue,
+                    'total' => $total,
                     'percentage' => $percentage,
-
-                    'result' => $subjectResult,
-
-                    'grade' => $gradeName,
-
+                    'grade' => $grade,
                     'grade_point' => $gradePoint,
-
                     'credit_score' => $creditScore,
-
+                    'result' => $result,
                 ];
-
             }
 
-            /* =====================================================
-            CURRENT SEMESTER SGPA
-            ===================================================== */
+            /*
+            |--------------------------------------------------------------------------
+            | SGPA
+            |--------------------------------------------------------------------------
+            */
 
             $sgpa = $currentCreditPoint > 0
+                ? round($currentGradePointEarn / $currentCreditPoint, 2)
+                : 0;
+
+            /*
+            |--------------------------------------------------------------------------
+            | PREVIOUS SEMESTER CREDIT / EARN
+            |--------------------------------------------------------------------------
+            */
+
+            $previousCreditPoint = 0;
+            $previousGradePointEarn = 0;
+            $previousResultStatus = 'N/A';
+
+            if ($semesterId > 1) {
+
+                $regularRows = $previousGpSheets->get($studentId, collect());
+                $reappearRows = $previousReappearGpSheets->get($studentId, collect());
+
+                // Resolve each previous semester + subject independently.
+                foreach ($previousSemesters as $prevSem) {
+
+                    $regularSemRows = $regularRows->where('semester_id', $prevSem)
+                        ->keyBy('subject_id');
+
+                    $reappearSemRows = $reappearRows->where('semester_id', $prevSem)
+                        ->keyBy('subject_id');
+
+                    $allPreviousSubjectIds = $regularSemRows->keys()
+                        ->merge($reappearSemRows->keys())
+                        ->unique();
+
+                    foreach ($allPreviousSubjectIds as $prevSubjectId) {
+
+                        // Reappear takes priority over regular result if present.
+                        $row = $reappearSemRows->get($prevSubjectId)
+                            ?? $regularSemRows->get($prevSubjectId);
+
+                        if (!$row) {
+                            continue;
+                        }
+
+                        $credits = $retotalValue(
+                            $row->credits ?? 0,
+                            $row->retotalling_credits ?? null
+                        );
+
+                        $gpEarn = $retotalValue(
+                            $row->credit_score ?? 0,
+                            $row->retotalling_credit_score ?? null
+                        );
+
+                        $previousCreditPoint += $credits;
+                        $previousGradePointEarn += $gpEarn;
+                    }
+                }
+
+                $previousResultStatus = 'PASS';
+
+                foreach ($previousSemesters as $prevSem) {
+
+                    $regularSemRows = $regularRows->where('semester_id', $prevSem)
+                        ->keyBy('subject_id');
+
+                    $reappearSemRows = $reappearRows->where('semester_id', $prevSem)
+                        ->keyBy('subject_id');
+
+                    $allPreviousSubjectIds = $regularSemRows->keys()
+                        ->merge($reappearSemRows->keys())
+                        ->unique();
+
+                    foreach ($allPreviousSubjectIds as $prevSubjectId) {
+
+                        $row = $reappearSemRows->get($prevSubjectId)
+                            ?? $regularSemRows->get($prevSubjectId);
+
+                        $resultValue = $row->retotalling_result
+                            ?: $row->result;
+
+                        if (
+                            $resultValue !== 'PASS'
+                            && !in_array($resultValue, ['AB', 'UMC', 'I/F'])
+                        ) {
+                            $previousResultStatus = 'FAIL';
+                        }
+
+                        if (in_array($resultValue, ['AB', 'UMC', 'I/F'])) {
+                            $previousResultStatus = 'FAIL';
+                        }
+                    }
+                }
+            } else {
+
+                // First semester: Previous = Current
+                $previousCreditPoint = $currentCreditPoint;
+                $previousGradePointEarn = $currentGradePointEarn;
+                $previousResultStatus = empty($failedSubjects) ? 'PASS' : 'FAIL';
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | CGPA
+            |--------------------------------------------------------------------------
+            */
+
+            $cgpaDenominator = $currentCreditPoint + $previousCreditPoint;
+
+            $cgpa = $cgpaDenominator > 0
                 ? round(
-                    $currentGradePointEarn / $currentCreditPoint,
+                    ($currentGradePointEarn + $previousGradePointEarn)
+                        / $cgpaDenominator,
                     2
                 )
                 : 0;
 
-            $currentResult = empty($failedSubjects)
-                ? 'PASS'
-                : implode(', ', array_filter($failedSubjects));
-
-            $currentRemark = empty($failedSubjects)
-                ? 'PASS'
-                : 'FAIL';
-
-            /* =====================================================
-            PREVIOUS SEMESTER DATA
-            ===================================================== */
-
-            $previousCreditPoint = 0;
-            $previousGradePointEarn = 0;
-
-            $previousResultStatus = '';
-            $previousRemark = '';
-
             /*
-            * Semester I:
-            * Previous values equal current values.
+            |--------------------------------------------------------------------------
+            | RESULT / REMARK
+            |--------------------------------------------------------------------------
             */
 
-            if (empty($previousSemesterIds)) {
+            $overallResult = implode(', ', $failedSubjects);
 
-                $previousCreditPoint = $currentCreditPoint;
+            $remark = empty($failedSubjects) ? 'PASS' : 'FAIL';
 
-                $previousGradePointEarn = $currentGradePointEarn;
-
-                $previousResultStatus = $currentResult;
-
-                $previousRemark = $currentRemark;
-
-                $cgpa = $sgpa;
-
-            }
-
-            /* =====================================================
-            PREVIOUS SEMESTERS
-            ===================================================== */
-
-            else {
-
-                /*
-                * Previous GP records are gathered from all chronological
-                * sessions including current exam session.
-                *
-                * Reappear rows override regular rows for matching
-                * student/subject/semester/session.
-                */
-
-                foreach ($previousSemesterIds as $previousSemId) {
-
-                    $previousSubjects = Subject::where('course_type', $courseType)
-                        ->where('course_id', $courseId)
-                        ->where('scheme_id', $schemeId)
-                        ->where('branch_id', $branchId)
-                        ->where('semester_id', $previousSemId)
-                        ->orderBy('orders')
-                        ->orderBy('id')
-                        ->get();
-
-                    foreach ($previousSubjects as $previousSubject) {
-
-                        $regularRows = DB::table('result_gp_sheet')
-                            ->where('student_id', $studentId)
-                            ->where('subject_id', $previousSubject->id)
-                            ->where('course_type', $courseType)
-                            ->where('course_id', $courseId)
-                            ->where('scheme_id', $schemeId)
-                            ->where('branch_id', $branchId)
-                            ->where('semester_id', $previousSemId)
-                            ->where('batch_id', $batchId)
-                            ->where('institute_id', $studentInstituteId)
-                            ->whereIn('exam_id', $examSessionIds)
-                            ->get();
-
-                        $reappearRows = DB::table('reappear_result_gp_sheet')
-                            ->where('student_id', $studentId)
-                            ->where('subject_id', $previousSubject->id)
-                            ->where('course_type', $courseType)
-                            ->where('course_id', $courseId)
-                            ->where('scheme_id', $schemeId)
-                            ->where('branch_id', $branchId)
-                            ->where('semester_id', $previousSemId)
-                            ->where('batch_id', $batchId)
-                            ->where('institute_id', $studentInstituteId)
-                            ->whereIn('exam_id', $examSessionIds)
-                            ->get();
-
-                        /*
-                        * Select latest chronological session.
-                        * For same session, reappear result has priority.
-                        */
-
-                        $effectiveRow = null;
-                        $effectiveExamId = null;
-
-                        foreach ($examSessionIds as $sessionId) {
-
-                            $reappearRow = $reappearRows
-                                ->where('exam_id', $sessionId)
-                                ->first();
-
-                            $regularRow = $regularRows
-                                ->where('exam_id', $sessionId)
-                                ->first();
-
-                            if ($reappearRow) {
-
-                                $effectiveRow = $reappearRow;
-                                $effectiveExamId = $sessionId;
-
-                            } elseif ($regularRow) {
-
-                                $effectiveRow = $regularRow;
-                                $effectiveExamId = $sessionId;
-
-                            }
-
-                        }
-
-                        if (!$effectiveRow) {
-                            continue;
-                        }
-
-                        /*
-                        * Retotalling value takes priority when available.
-                        */
-
-                        $effectiveCredits = (
-                            isset($effectiveRow->retotalling_credits)
-                            && $effectiveRow->retotalling_credits != 0
-                        )
-                            ? (float) $effectiveRow->retotalling_credits
-                            : (float) ($effectiveRow->credits ?? 0);
-
-                        $effectiveCreditScore = (
-                            isset($effectiveRow->retotalling_credit_score)
-                            && $effectiveRow->retotalling_credit_score != 0
-                        )
-                            ? (float) $effectiveRow->retotalling_credit_score
-                            : (float) ($effectiveRow->credit_score ?? 0);
-
-                        $previousCreditPoint += $effectiveCredits;
-
-                        $previousGradePointEarn += $effectiveCreditScore;
-
-                    }
-
-                }
-
-                /*
-                * Weighted CGPA.
-                */
-
-                $allCredits = $currentCreditPoint + $previousCreditPoint;
-
-                $allGradePointEarn = $currentGradePointEarn
-                    + $previousGradePointEarn;
-
-                $cgpa = $allCredits > 0
-                    ? round($allGradePointEarn / $allCredits, 2)
-                    : 0;
-
-                /* =================================================
-                PREVIOUS RESULT STATUS / REMARKS
-                ================================================= */
-
-                $regularSummaryRows = DB::table('student_result_summary')
-                    ->where('student_id', $studentId)
-                    ->where('course_type', $courseType)
-                    ->where('course_id', $courseId)
-                    ->where('scheme_id', $schemeId)
-                    ->where('branch_id', $branchId)
-                    ->where('batch_id', $batchId)
-                    ->where('institute_id', $studentInstituteId)
-                    ->whereIn('semester_id', $previousSemesterIds)
-                    ->whereIn('exam_id', $examSessionIds)
-                    ->get();
-
-                $reappearSummaryRows = DB::table('reappear_student_result_summary')
-                    ->where('student_id', $studentId)
-                    ->where('course_type', $courseType)
-                    ->where('course_id', $courseId)
-                    ->where('scheme_id', $schemeId)
-                    ->where('branch_id', $branchId)
-                    ->where('batch_id', $batchId)
-                    ->where('institute_id', $studentInstituteId)
-                    ->whereIn('semester_id', $previousSemesterIds)
-                    ->whereIn('exam_id', $examSessionIds)
-                    ->get();
-
-                $previousStatusParts = [];
-                $previousRemarkParts = [];
-
-                foreach ($previousSemesterIds as $previousSemId) {
-
-                    $effectiveSummary = null;
-
-                    foreach ($examSessionIds as $sessionId) {
-
-                        $reappearSummary = $reappearSummaryRows
-                            ->where('semester_id', $previousSemId)
-                            ->where('exam_id', $sessionId)
-                            ->first();
-
-                        $regularSummary = $regularSummaryRows
-                            ->where('semester_id', $previousSemId)
-                            ->where('exam_id', $sessionId)
-                            ->first();
-
-                        if ($reappearSummary) {
-
-                            $effectiveSummary = $reappearSummary;
-
-                        } elseif ($regularSummary) {
-
-                            $effectiveSummary = $regularSummary;
-
-                        }
-
-                    }
-
-                    if ($effectiveSummary) {
-
-                        $previousStatusParts[] = (
-                            $effectiveSummary->retotalling_result_status
-                            ?? $effectiveSummary->result_status
-                            ?? ''
-                        );
-
-                        $previousRemarkParts[] = (
-                            $effectiveSummary->retotalling_remarks
-                            ?? $effectiveSummary->remarks
-                            ?? ''
-                        );
-
-                    }
-
-                }
-
-                $previousResultStatus = implode(
-                    ', ',
-                    array_filter($previousStatusParts)
-                );
-
-                $previousRemark = implode(
-                    ', ',
-                    array_filter($previousRemarkParts)
-                );
-
-            }
-
-            /* =====================================================
-            FINAL STUDENT DATA
-            ===================================================== */
+            /*
+            |--------------------------------------------------------------------------
+            | STUDENT DATA
+            |--------------------------------------------------------------------------
+            */
 
             $marks[$studentId] = [
-
-                'student' => $student,
-
-                'subjects' => $studentSubjectMarks,
-
-                'result' => $currentResult,
-
+                'subjects' => $studentSubjects,
+                'result' => $overallResult,
                 'current_credit_point' => $currentCreditPoint,
-
                 'current_grade_point_earn' => $currentGradePointEarn,
-
                 'sgpa' => $sgpa,
-
                 'previous_credit_point' => $previousCreditPoint,
-
                 'previous_grade_point_earn' => $previousGradePointEarn,
-
                 'cgpa' => $cgpa,
-
                 'previous_result_status' => $previousResultStatus,
-
-                'remark' => $previousSemesterIds
-                    ? $previousRemark
-                    : $currentRemark,
-
+                'remark' => $remark,
             ];
-
         }
 
-        /* =========================================================
-        11. RETURN RENDERED BLADE HTML
-        ========================================================= */
-
-        $view = 'backend.result.result-prepare.result';
+        /*
+        |--------------------------------------------------------------------------
+        | VIEW
+        |--------------------------------------------------------------------------
+        */
 
         return view(
-            $view,
+            'backend.result.result-prepare.result',
             compact(
                 'exam',
-                'courseType',
                 'course',
+                'branch',
                 'scheme',
                 'batch',
-                'branch',
+                'semester',
                 'className',
                 'subjects',
                 'students',
+                'midSemMarks',
+                'endSemMarks',
+                'grades',
                 'marks',
-                'examFormSubjects'
+                'institutes',
+                'overallPassPercent',
+                'percentageType',
+                'previousGpSheets',
+                'previousReappearGpSheets',
+                'previousSemesters',
+                'instituteId'
             )
         )->render();
     }

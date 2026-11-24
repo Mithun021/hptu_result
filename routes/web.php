@@ -240,8 +240,8 @@ Route::middleware(['backend.auth'])->prefix('backend')->group(function () {
 
         Route::post( '/internal-marks/grace-marks', [ResultController::class, 'updateGraceMarks'] )->name('internal-marks.grace-marks');
 
-        Route::post('internal-marks/export',[ResultController::class,'export'])->name('internal-marks.export');
-        Route::post('internal-marks/import',[ResultController::class,'import'])->name('internal-marks.import');
+        Route::post('internal-marks/export',[ResultController::class,'exportInternal'])->name('internal-marks.export');
+        Route::post('internal-marks/import',[ResultController::class,'importInternal'])->name('internal-marks.import');
 
 
         Route::get('/external-marks', [ResultController::class, 'externalMarks'])
