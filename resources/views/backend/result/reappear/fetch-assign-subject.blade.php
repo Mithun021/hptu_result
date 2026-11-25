@@ -102,7 +102,7 @@ $(document).ready(function () {
 
         $.ajax({
 
-            url: "{{ route('results.supple-assign-subjects.fetch') }}",
+            url: "{{ route('results.reappear-assign-subjects.fetch') }}",
 
             type: "GET",
 

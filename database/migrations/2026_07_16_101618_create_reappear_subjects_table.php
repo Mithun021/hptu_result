@@ -11,17 +11,17 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('supple_subjects', function (Blueprint $table) {
+        Schema::create('reappear_subjects', function (Blueprint $table) {
             $table->id();
 
-            $table->unsignedBigInteger('supple_student_detail_id');
+            $table->unsignedBigInteger('reappear_student_detail_id');
             $table->unsignedBigInteger('subject_id');
 
             $table->timestamps();
 
-            $table->foreign('supple_student_detail_id')
+            $table->foreign('reappear_student_detail_id')
                 ->references('id')
-                ->on('supple_student_details')
+                ->on('reappear_student_details')
                 ->cascadeOnDelete();
 
             $table->foreign('subject_id')
@@ -30,7 +30,7 @@ return new class extends Migration
 
             // Prevent duplicate subject for same student detail
             $table->unique(
-                ['supple_student_detail_id', 'subject_id'],
+                ['reappear_student_detail_id', 'subject_id'],
                 'unique_supple_subject'
             );
         });
@@ -41,6 +41,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('supple_subjects');
+        Schema::dropIfExists('reappear_subjects');
     }
 };

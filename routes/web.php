@@ -34,7 +34,7 @@ use App\Http\Controllers\SchemeController;
 use App\Http\Controllers\SemesterController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\SubjectController;
-use App\Http\Controllers\SupplementaryResultController;
+use App\Http\Controllers\ReappearResultController;
 use App\Models\AnnualSemester;
 use Illuminate\Support\Facades\Route;
 
@@ -307,22 +307,22 @@ Route::middleware(['backend.auth'])->prefix('backend')->group(function () {
         Route::post( '/save-annual-moderation', [ResultController::class, 'saveAnnualModeration'] )->name('save.annual.moderation');
 
          // Supplementary Result Routes
-        Route::get('/supple-mapped-subject', [SupplementaryResultController::class, 'suppleMappedSubject'])->name('supple-mapped-subject');
-        Route::get('/fetch-supple-mapped-subject', [SupplementaryResultController::class, 'fetchSuppleMappedSubject'])->name('supple-assign-subjects.fetch');
-        Route::post('/supplement/save',[SupplementaryResultController::class,'saveSuppleStudents'])->name('supplement.save');
-        Route::get('/supple-result-prepare', [SupplementaryResultController::class, 'suppleResultPrepare'])->name('supple-result-prepare');
-        Route::get('/supple-result-prepare/fetch', [SupplementaryResultController::class, 'fetchSuppleResult']) ->name('supple-result-prepare.fetch');
-        Route::post( '/supplementary-result/save-mark', [SupplementaryResultController::class, 'saveSuppleMark'] )->name('supplementary-result.save-mark');
-        Route::post( '/supplementary-result/update-lock-status', [SupplementaryResultController::class, 'updateLockStatus'] )->name('supplementary-result.update-lock-status');
-        Route::get('/supple-subject-wise-result', [SupplementaryResultController::class, 'suppleSubjectWiseResult'])->name('supple.subject-wise-result');
-        Route::get('/supple-subject-wise-result-prepare/fetch', [SupplementaryResultController::class, 'fetchSuppleSubjectWiseResult'])->name('supple-subject-wise-result-prepare.fetch');
+        Route::get('/reappear-mapped-subject', [ReappearResultController::class, 'reappearMappedSubject'])->name('reappear-mapped-subject');
+        Route::get('/fetch-reappear-mapped-subject', [ReappearResultController::class, 'fetchReappearMappedSubject'])->name('reappear-assign-subjects.fetch');
+        Route::post('/reappear/student/save',[ReappearResultController::class,'saveReappearStudents'])->name('reappear.student.save');
+        Route::get('/reappear-result-prepare', [ReappearResultController::class, 'reappearResultPrepare'])->name('reappear-result-prepare');
+        Route::get('/reappear-result-prepare/fetch', [ReappearResultController::class, 'fetchReappearResult']) ->name('reappear-result-prepare.fetch');
+        Route::post( '/reappear-result/save-mark', [ReappearResultController::class, 'saveReappearMark'] )->name('reappear-result.save-mark');
+        Route::post( '/reappear-result/update-lock-status', [ReappearResultController::class, 'updateLockStatus'] )->name('reappear-result.update-lock-status');
+        Route::get('/reappear-subject-wise-result', [ReappearResultController::class, 'reappearSubjectWiseResult'])->name('reappear.subject-wise-result');
+        Route::get('/reappear-subject-wise-result-prepare/fetch', [ReappearResultController::class, 'fetchReappearSubjectWiseResult'])->name('reappear-subject-wise-result-prepare.fetch');
 
-        Route::get('/supple-overall-result', [SupplementaryResultController::class, 'suppleOverallResult'])->name('supple.overall-result');
-        Route::get('/supple-overall-result-fetch', [SupplementaryResultController::class, 'fetchSuppleOverallResult'])->name('supple.fetch-overall-result');
-        Route::post('/supple-overall-result-save', [SupplementaryResultController::class, 'saveSuppleOverallResult'] )->name('supple.save-overall-result');
-        Route::get('/supple-result-overview', [SupplementaryResultController::class, 'suppleResultOverview'])->name('supple-overview');
-        Route::get('/supple-result-overview/fetch', [SupplementaryResultController::class, 'fetchSuppleResultOverview'])->name('fetch.supple-overview');
-        Route::post('/supple-result-declare', [SupplementaryResultController::class, 'declareSuppleResult'])->name('supple-declare');
+        Route::get('/reappear-overall-result', [ReappearResultController::class, 'reappearOverallResult'])->name('reappear.overall-result');
+        Route::get('/reappear-overall-result-fetch', [ReappearResultController::class, 'fetchReappearOverallResult'])->name('reappear.fetch-overall-result');
+        Route::post('/reappear-overall-result-save', [ReappearResultController::class, 'saveReappearOverallResult'] )->name('reappear.save-overall-result');
+        Route::get('/reappear-result-overview', [ReappearResultController::class, 'reappearResultOverview'])->name('reappear-overview');
+        Route::get('/reappear-result-overview/fetch', [ReappearResultController::class, 'fetchReappearResultOverview'])->name('fetch.reappear-overview');
+        Route::post('/reappear-result-declare', [ReappearResultController::class, 'declareReappearResult'])->name('reappear-declare');
 
         Route::get('/cp-sheet/end-sem', [CpSheetController::class, 'endSemIndex'])->name('cp-sheet.end-sem');
         Route::get('/cp-sheet/fetch-result-cp-sheet', [CpSheetController::class, 'fetchRegularCpSheet'])->name('cp-sheet.fetch.regular-result');

@@ -4888,8 +4888,6 @@ class ResultController extends Controller
 
 
     // Save Final Result Sheet ------------------
-
-
     public function saveResultSheet(Request $request)
     {
         DB::beginTransaction();
@@ -4898,8 +4896,6 @@ class ResultController extends Controller
 
             $summaryData = $request->input('summary_data', []);
             $gpSheetData = $request->input('gp_sheet_data', []);
-
-            // dd($gpSheetData);
 
             /*
             |--------------------------------------------------------------------------
@@ -4921,28 +4917,27 @@ class ResultController extends Controller
                         'semester_id'         => $row['semester_id'],
                         'annual_semester_id'  => $row['annual_semester_id'],
                         'batch_id'            => $row['batch_id'],
-                        'institute_id'        => $row['institute_id'],
+                        'institute_id'         => $row['institute_id'],
                     ],
 
                     [
-                        'gpa'             => $row['gpa'],
-                        'cgpa'            => $row['cgpa'],
-                        'result_status'   => $row['result_status'],
-                        'grade_status'    => $row['grade_status'],
+                        'sgpa'           => $row['sgpa'] ?? 0,
+                        'cgpa'           => $row['cgpa'] ?? 0,
+                        'result_status'   => $row['result_status'] ?? 'FAIL',
                         'remarks'         => $row['remarks'] ?? null,
-                        // 'result_declare'  => $row['result_declare'] ?? 1,
+
+                        // Result will not be declared yet
                         'result_declare'  => 0,
                     ]
                 );
             }
+
 
             /*
             |--------------------------------------------------------------------------
             | Result GP Sheet
             |--------------------------------------------------------------------------
             */
-
-            $subjectCredits = Subject::pluck('credits', 'id')->toArray();
 
             foreach ($gpSheetData as $row) {
 
@@ -4952,29 +4947,38 @@ class ResultController extends Controller
                         'student_id'          => $row['student_id'],
                         'subject_id'          => $row['subject_id'],
                         'exam_id'             => $row['exam_id'],
-                        'course_type'         => $row['course_type'],
-                        'course_id'           => $row['course_id'],
-                        'scheme_id'           => $row['scheme_id'],
-                        'branch_id'           => $row['branch_id'],
-                        'semester_id'         => $row['semester_id'],
-                        'annual_semester_id'  => $row['annual_semester_id'],
-                        'batch_id'            => $row['batch_id'],
-                        'institute_id'        => $row['institute_id'],
+                        'course_type'          => $row['course_type'],
+                        'course_id'            => $row['course_id'],
+                        'scheme_id'            => $row['scheme_id'],
+                        'branch_id'            => $row['branch_id'],
+                        'semester_id'          => $row['semester_id'],
+                        'annual_semester_id'   => $row['annual_semester_id'],
+                        'batch_id'             => $row['batch_id'],
+                        'institute_id'          => $row['institute_id'],
                     ],
 
                     [
-                        'result'     => $row['result'],
-                        'result_gp'  => $row['result_gp'],
-                        'grade'      => $row['grade'] ?? null,
-                        'credits'    => $subjectCredits[$row['subject_id']] ?? 0,
+                        'credits'               => $row['credits'] ?? 0,
+                        'result'                 => $row['result'] ?? 'FAIL',
+                        'earn_credit_point'      => $row['earn_credit_point'] ?? 0,
+                        'grade'                 => $row['grade'] ?? null,
+                        'gain_percentage'        => $row['gain_percentage'] ?? 0,
+                        'credit_score'           => $row['credit_score'] ?? 0,
                     ]
                 );
             }
 
+
+            /*
+            |--------------------------------------------------------------------------
+            | COMMIT TRANSACTION
+            |--------------------------------------------------------------------------
+            */
+
             DB::commit();
 
             return response()->json([
-                'status' => true,
+                'status'  => true,
                 'message' => 'Result sheet saved successfully.'
             ]);
 
@@ -4983,13 +4987,13 @@ class ResultController extends Controller
             DB::rollBack();
 
             return response()->json([
-                'status' => false,
+                'status'  => false,
                 'message' => $e->getMessage(),
-                'line' => $e->getLine()
+                'line'    => $e->getLine()
             ], 500);
         }
     }
-
+    
     public function resultOverview(){
         $exams = Exam::orderBy('id', 'desc')->get();
         $courses = Course::all();

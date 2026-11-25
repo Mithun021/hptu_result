@@ -104,30 +104,30 @@
                                 </div>
                             </li>
                             <li>
-                                <a href="#suppleResult" data-bs-toggle="collapse">
+                                <a href="#reappearResult" data-bs-toggle="collapse">
                                     <span>Reappear Result</span>
                                     <span class="menu-arrow"></span>
                                 </a>
 
-                                <div class="collapse" id="suppleResult">
+                                <div class="collapse" id="reappearResult">
                                     <ul class="nav-third-level">
                                         <li>
-                                            <a href="{{ route('results.supple-mapped-subject') }}" class="tp-link">
+                                            <a href="{{ route('results.reappear-mapped-subject') }}" class="tp-link">
                                                 Mapped Subject
                                             </a>
                                         </li>
                                         <li>
-                                            <a href="{{ route('results.supple-result-prepare') }}" class="tp-link">
+                                            <a href="{{ route('results.reappear-result-prepare') }}" class="tp-link">
                                                 Result Prepare
                                             </a>
                                         </li>
                                        <li>
-                                            <a href="{{ route('results.supple.subject-wise-result') }}" class="tp-link">
+                                            <a href="{{ route('results.reappear.subject-wise-result') }}" class="tp-link">
                                                 Subject Wise Result
                                             </a>
                                         </li>
                                         <li>
-                                            <a href="{{ route('results.supple.overall-result') }}" class="tp-link">
+                                            <a href="{{ route('results.reappear.overall-result') }}" class="tp-link">
                                                 Overall Result
                                             </a>
                                         </li>
@@ -146,7 +146,7 @@
                                             <a href="{{ route('results.overview') }}" class="tp-link">Endsem Results</a>
                                         </li>
                                         <li>
-                                            <a href="{{ route('results.supple-overview') }}" class="tp-link">Supple Result</a>
+                                            <a href="{{ route('results.reappear-overview') }}" class="tp-link">Reappear Result</a>
                                         </li>
                                     </ul>
                                 </div>

@@ -129,6 +129,10 @@
 
     // Special grades/statuses
     $specialGrades = ['AB', 'UMC', 'I/F', 'R', 'F'];
+
+    // JSON payloads for saving Regular result
+    $resultGpSheetData = [];
+    $studentResultSummaryData = [];
 @endphp
 
 <div class="result-sheet">
@@ -359,6 +363,26 @@
                     $currentResult = !empty($failedSubjectCodes)
                         ? implode(', ', $failedSubjectCodes)
                         : 'PASS';
+
+                    // STUDENT RESULT SUMMARY JSON DATA
+                    $studentResultSummaryData[] = [
+                        'student_id' => $student->id,
+                        'exam_id' => $exam->id,
+                        'course_type' => $courseType ?? ($course->course_type ?? null),
+                        'course_id' => $course->id,
+                        'scheme_id' => $scheme->id,
+                        'branch_id' => $branch->id,
+                        'semester_id' => isset($semester) ? $semester->id : null,
+                        'annual_semester_id' => isset($annualSemester) ? $annualSemester->id : null,
+                        'batch_id' => $batch->id,
+                        'institute_id' => $instituteId ?? $student->institute_id,
+                        'sgpa' => (float)($studentResult['sgpa'] ?? 0),
+                        'cgpa' => (float)($studentResult['cgpa'] ?? 0),
+                        'result_status' => empty($failedSubjectCodes) ? 'PASS' : 'FAIL',
+                        'remarks' => !empty($failedSubjectCodes)
+                            ? implode(', ', $failedSubjectCodes)
+                            : 'PASS',
+                    ];
                 @endphp
 
                 <tr>
@@ -408,6 +432,33 @@
                             $creditScore = $subjectData['credit_score'] ?? 0;
 
                             $isFailed = $result !== '' && $result !== 'PASS';
+
+                            // RESULT GP SHEET JSON DATA
+                            // AB / UMC / I/F have zero earned grade points.
+                            $normalizedGrade = strtoupper(trim((string)$grade));
+                            $isSpecialGradeForCredit = in_array($normalizedGrade, ['AB', 'UMC', 'I/F']);
+                            $storedGradePoint = $isSpecialGradeForCredit ? 0 : (float)$gradePoint;
+                            $storedCredits = (float)($subject->credits ?? 0);
+
+                            $resultGpSheetData[] = [
+                                'student_id' => $student->id,
+                                'exam_id' => $exam->id,
+                                'course_type' => $courseType ?? ($course->course_type ?? null),
+                                'course_id' => $course->id,
+                                'scheme_id' => $scheme->id,
+                                'branch_id' => $branch->id,
+                                'semester_id' => isset($semester) ? $semester->id : null,
+                                'annual_semester_id' => isset($annualSemester) ? $annualSemester->id : null,
+                                'batch_id' => $batch->id,
+                                'institute_id' => $instituteId ?? $student->institute_id,
+                                'subject_id' => $subject->id,
+                                'credits' => $storedCredits,
+                                'result' => $result === 'PASS' ? 'PASS' : 'FAIL',
+                                'earn_credit_point' => $storedGradePoint,
+                                'grade' => $grade,
+                                'gain_percentage' => $result === 'PASS' ? (float)($percentage ?? 0) : 0,
+                                'credit_score' => $storedCredits * $storedGradePoint,
+                            ];
 
                             /*
                             |--------------------------------------------------------------------------
@@ -539,3 +590,220 @@
         </tbody>
     </table>
 </div>
+
+{{-- JSON DATA FOR REGULAR RESULT SAVE --}}
+<input type="hidden"
+       name="result_gp_sheet_data"
+       id="result_gp_sheet_data"
+       value="{{ json_encode($resultGpSheetData) }}">
+
+<input type="hidden"
+       name="student_result_summary_data"
+       id="student_result_summary_data"
+       value="{{ json_encode($studentResultSummaryData) }}">
+
+
+<div style="text-align:center; margin-top:20px;">
+    <button id="saveResultSheet" class="btn btn-success">
+        Save Result Sheet
+    </button>
+</div>
+
+<script>
+$(document).on('click', '#saveResultSheet', function () {
+
+    let btn = $(this);
+
+    Swal.fire({
+        title: 'Are you sure?',
+        text: "Do you want to save this result sheet?",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#28a745',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Yes, Save it!'
+    }).then((result) => {
+
+        if (!result.isConfirmed) {
+            return;
+        }
+
+        btn.prop('disabled', true);
+
+        Swal.fire({
+            title: 'Please wait...',
+            text: 'Saving result sheet...',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        // Read JSON data from hidden inputs
+        let gpSheetData = JSON.parse($('#result_gp_sheet_data').val() || '[]');
+
+        let summaryData = JSON.parse($('#student_result_summary_data').val() || '[]');
+
+        $.ajax({
+
+            url: "{{ route('results.save.result.sheet') }}",
+            type: "POST",
+
+            contentType: "application/json",
+            processData: false,
+
+            data: JSON.stringify({
+
+                exam_id: "{{ $exam->id }}",
+
+                summary_data: summaryData,
+
+                gp_sheet_data: gpSheetData
+
+            }),
+
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            },
+
+            success: function (res) {
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Saved!',
+                    text: res.message ?? 'Result saved successfully',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+
+                btn.prop('disabled', false);
+            },
+
+            error: function (xhr) {
+
+                let message = 'Error saving result';
+
+                if (xhr.responseJSON?.message) {
+                    message = xhr.responseJSON.message;
+                }
+
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Oops!',
+                    text: message
+                });
+
+                btn.prop('disabled', false);
+            }
+        });
+
+    });
+});
+</script>
+
+{{-- =========================================================
+    RESULT GP SHEET JSON DATA DISPLAY
+========================================================= --}}
+
+{{-- @php
+    $gpColumns = !empty($resultGpSheetData)
+        ? array_keys($resultGpSheetData[array_key_first($resultGpSheetData)])
+        : [];
+@endphp
+
+<div style="margin-top:30px; overflow-x:auto;">
+
+    <h3>Result GP Sheet Data</h3>
+
+    <table border="1" cellpadding="6" cellspacing="0"
+        style="width:100%; border-collapse:collapse; font-size:12px;">
+
+        <thead>
+            <tr style="background:#ddd;">
+                <th>SN</th>
+
+                @foreach($gpColumns as $column)
+                    <th>{{ $column }}</th>
+                @endforeach
+            </tr>
+        </thead>
+
+        <tbody>
+            @forelse($resultGpSheetData as $row)
+
+                <tr>
+                    <td>{{ $loop->iteration }}</td>
+
+                    @foreach($gpColumns as $column)
+                        <td>
+                            {{ $row[$column] ?? '' }}
+                        </td>
+                    @endforeach
+                </tr>
+
+            @empty
+                <tr>
+                    <td colspan="{{ count($gpColumns) + 1 }}">
+                        No Result GP Sheet Data Found
+                    </td>
+                </tr>
+            @endforelse
+        </tbody>
+
+    </table>
+
+</div> --}}
+
+
+{{-- =========================================================
+    STUDENT RESULT SUMMARY JSON DATA DISPLAY
+========================================================= --}}
+
+{{-- @php
+    $summaryColumns = !empty($studentResultSummaryData)
+        ? array_keys($studentResultSummaryData[array_key_first($studentResultSummaryData)])
+        : [];
+@endphp
+
+<div style="margin-top:30px; overflow-x:auto;">
+
+    <h3>Student Result Summary Data</h3>
+
+    <table border="1" cellpadding="6" cellspacing="0"
+        style="width:100%; border-collapse:collapse; font-size:12px;">
+
+        <thead>
+            <tr style="background:#ddd;">
+                <th>SN</th>
+
+                @foreach($summaryColumns as $column)
+                    <th>{{ $column }}</th>
+                @endforeach
+            </tr>
+        </thead>
+
+        <tbody>
+            @forelse($studentResultSummaryData as $row)
+
+                <tr>
+                    <td>{{ $loop->iteration }}</td>
+
+                    @foreach($summaryColumns as $column)
+                        <td>
+                            {{ $row[$column] ?? '' }}
+                        </td>
+                    @endforeach
+                </tr>
+
+            @empty
+                <tr>
+                    <td colspan="{{ count($summaryColumns) + 1 }}">
+                        No Student Result Summary Data Found
+                    </td>
+                </tr>
+            @endforelse
+        </tbody>
+
+    </table>
+
+</div> --}}

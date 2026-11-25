@@ -10,13 +10,13 @@ class StudentResultSummary extends Model
 
     protected $fillable = [
         'student_id',
-        'gpa',
+        'sgpa',
         'cgpa',
         'result_status',
         'grade_status',
         'remarks',
 
-        'retotalling_gpa',
+        'retotalling_sgpa',
         'retotalling_cgpa',
         'retotalling_result_status',
         'retotalling_grade_status',

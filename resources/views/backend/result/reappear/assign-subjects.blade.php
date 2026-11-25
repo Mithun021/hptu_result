@@ -23,15 +23,14 @@
         </div>
     </div>
 </div>
-
 <script src="{{ asset('assets/libs/jquery/jquery.min.js') }}"></script>
 <script src="{{ asset('assets/js/sweetalert.js') }}"></script>
 <script src="{{ asset('assets/libs/jquery-validate/jquery.validate.min.js') }}"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
-@include('backend.result.supplement.assign-subject-modal')
-@include('backend.result.supplement.assign-subject-js')
-@include('backend.result.supplement.fetch-assign-subject')
+@include('backend.result.reappear.assign-subject-modal')
+@include('backend.result.reappear.assign-subject-js')
+@include('backend.result.reappear.fetch-assign-subject')
 @include('backend.result.js.export-button')
 
 @endsection

@@ -4,9 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class SuppleStudentDetail extends Model
+class ReappearStudentDetail extends Model
 {
-    protected $table = 'supple_student_details';
+    protected $table = 'reappear_student_details';
 
     protected $fillable = [
         'student_id',
@@ -72,8 +72,8 @@ class SuppleStudentDetail extends Model
         return $this->belongsTo(Institute::class);
     }
 
-    public function suppleSubjects()
+    public function reappearSubjects()
     {
-        return $this->hasMany(SuppleSubject::class, 'supple_student_detail_id');
+        return $this->hasMany(ReappearSubject::class, 'supple_student_detail_id');
     }
 }
