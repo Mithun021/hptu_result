@@ -88,8 +88,7 @@
                         <h4>CONTROLLER OF EXAMINATIONS</h4>
 
                         <h4>
-                            GURU ANGAD DEV VETERINARY AND ANIMAL SCIENCE UNIVERSITY,
-                            LUDHIANA (INDIA)
+                            Himachal Pradesh Technical Univesity, Hamirpur
                         </h4>
 
                         <h4>{{ $className }}</h4>

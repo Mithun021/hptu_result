@@ -16,7 +16,11 @@ $(document).ready(function () {
 
             course_type: { required: true },
 
+            result_type: { required: true },
+
             course_id: { required: true },
+
+            scheme_id: { required: true },
 
             branch_id: { required: true },
 
@@ -45,6 +49,8 @@ $(document).ready(function () {
             course_type: "Select course type",
 
             course_id: "Select course",
+
+            scheme_id: "Select scheme",
 
             branch_id: "Select branch",
 

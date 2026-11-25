@@ -33,33 +33,33 @@ class RetotallingResultController extends Controller
         $exams = Exam::latest()->get();
         return view('backend.retotalling-result.regular-result.external-marks.index', compact('courses', 'exams'));
     }
+
     public function fetchRegularExternalMarks(Request $request)
     {
-        /*
-        |--------------------------------------------------------------------------
-        | 1. Request Filters
-        |--------------------------------------------------------------------------
-        */
+        /* =========================================================
+        1. REQUEST PARAMETERS
+        ========================================================= */
 
-        $examId           = $request->exam_id;
-        $courseType       = $request->course_type;
-        $courseId         = $request->course_id;
-        $branchId         = $request->branch_id;
-        $batchId          = $request->batch_id;
-        $schemeId         = $request->scheme_id;
-        $semesterId       = $request->semester_id;
-        $annualSemesterId = $request->annual_semester_id;
-        $instituteId      = $request->institute_id;
+        $examId            = $request->exam_id;
+        $courseType        = $request->course_type;
+        $courseId          = $request->course_id;
+        $branchId          = $request->branch_id;
+        $batchId           = $request->batch_id;
+        $schemeId          = $request->scheme_id;
+        $semesterId        = $request->semester_id;
+        $annualSemesterId  = $request->annual_semester_id;
+        $instituteId       = $request->institute_id;
 
-        /*
-        |--------------------------------------------------------------------------
-        | 2. Basic Details
-        |--------------------------------------------------------------------------
-        */
 
-        $exam = Exam::findOrFail($examId);
+        /* =========================================================
+        2. BASIC DETAILS
+        ========================================================= */
+
+        $exam   = Exam::findOrFail($examId);
         $course = Course::findOrFail($courseId);
         $branch = Branch::find($branchId);
+        $scheme = Scheme::find($schemeId);
+        $batch  = Batch::find($batchId);
 
         if ($courseType == 'Semester Based') {
 
@@ -78,16 +78,16 @@ class RetotallingResultController extends Controller
                 : '';
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | 3. Fetch Subjects
-        |--------------------------------------------------------------------------
-        */
+
+        /* =========================================================
+        3. FETCH ONLY THEORY SUBJECTS
+        ========================================================= */
 
         $subjectsQuery = Subject::query()
             ->where('course_type', $courseType)
             ->where('course_id', $courseId)
-            ->where('branch_id', $branchId);
+            ->where('branch_id', $branchId)
+            ->where('type', 'Theory');
 
         if (!empty($schemeId)) {
             $subjectsQuery->where('scheme_id', $schemeId);
@@ -106,26 +106,21 @@ class RetotallingResultController extends Controller
                 ->whereNull('semester_id');
         }
 
+        // Only Theory subjects will be available in $subjects
         $subjects = $subjectsQuery
             ->orderBy('is_nc')
-            ->orderBy('type')
             ->orderBy('subject_code')
             ->get();
 
-        /*
-        |--------------------------------------------------------------------------
-        | 4. Fetch Retotalling Applications
-        |--------------------------------------------------------------------------
-        |
-        | re_totalling_student table does not have course_type.
-        | result_type is fixed as regular.
-        |
-        */
+
+        /* =========================================================
+        4. FETCH RETOTALLING STUDENT MAPPING
+        ========================================================= */
 
         $retotallingQuery = ReTotallingStudent::with([
-            'student',
-            'subjects'
-        ])
+                'student',
+                'subjects'
+            ])
             ->where('exam_id', $examId)
             ->where('result_type', 'regular')
             ->where('course_id', $courseId)
@@ -153,9 +148,10 @@ class RetotallingResultController extends Controller
                 ->whereNull('semester_id');
         }
 
-        /*
-        * course_type filter only on Student table.
-        */
+
+        /* =========================================================
+        5. STUDENT FILTER
+        ========================================================= */
 
         $retotallingQuery->whereHas('student', function ($query) use (
             $courseType,
@@ -178,15 +174,17 @@ class RetotallingResultController extends Controller
             if (!empty($instituteId)) {
                 $query->where('institute_id', $instituteId);
             }
+
+            // Current semester/annual semester is intentionally
+            // not checked here.
         });
 
-        $retotallingRecords = $retotallingQuery->get();
 
-        /*
-        |--------------------------------------------------------------------------
-        | 5. Get Applied Students
-        |--------------------------------------------------------------------------
-        */
+        /* =========================================================
+        6. GET RETOTALLING RECORDS & STUDENTS
+        ========================================================= */
+
+        $retotallingRecords = $retotallingQuery->get();
 
         $students = $retotallingRecords
             ->pluck('student')
@@ -195,11 +193,12 @@ class RetotallingResultController extends Controller
             ->sortBy('university_roll_no')
             ->values();
 
-        /*
-        |--------------------------------------------------------------------------
-        | 6. Prepare Student-wise Retotalling Subject IDs
-        |--------------------------------------------------------------------------
-        */
+        $studentIds = $students->pluck('id')->toArray();
+
+
+        /* =========================================================
+        7. FETCH RETOTALLING SUBJECTS STUDENT WISE
+        ========================================================= */
 
         $retotallingSubjects = [];
 
@@ -232,13 +231,10 @@ class RetotallingResultController extends Controller
             );
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | 7. Fetch All Marks of Applied Students
-        |--------------------------------------------------------------------------
-        */
 
-        $studentIds = $students->pluck('id')->toArray();
+        /* =========================================================
+        8. FETCH EXTERNAL MARKS
+        ========================================================= */
 
         $marks = [];
 
@@ -254,6 +250,10 @@ class RetotallingResultController extends Controller
 
             if (!empty($schemeId)) {
                 $marksQuery->where('scheme_id', $schemeId);
+            }
+
+            if (!empty($instituteId)) {
+                $marksQuery->where('institute_id', $instituteId);
             }
 
             if ($courseType == 'Semester Based') {
@@ -275,25 +275,18 @@ class RetotallingResultController extends Controller
 
             $marksRecords = $marksQuery->get();
 
-            /*
-            |--------------------------------------------------------------------------
-            | 8. Prepare Marks Array
-            |--------------------------------------------------------------------------
-            */
-
             foreach ($marksRecords as $mark) {
 
                 $studentId = $mark->student_id;
                 $subjectId = $mark->subject_id;
 
                 $markData = [
-                    'obtained_marks' => $mark->obtained_marks,
-                    'exam_status' => $mark->exam_status,
-                    'is_locked' => $mark->is_locked,
-                    'grade' => $mark->grade,
-
-                    'retotalling_obtained_marks' => $mark->retotalling_obtained_marks,
-                    'retotalling_marks_locked' => $mark->retotalling_marks_locked,
+                    'obtained_marks'               => $mark->obtained_marks,
+                    'exam_status'                   => $mark->exam_status,
+                    'is_locked'                      => $mark->is_locked,
+                    'grade'                           => $mark->grade,
+                    'retotalling_obtained_marks'     => $mark->retotalling_obtained_marks,
+                    'retotalling_marks_locked'       => $mark->retotalling_marks_locked,
                 ];
 
                 if (
@@ -310,11 +303,11 @@ class RetotallingResultController extends Controller
             }
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | 9. Fetch Student Subject Enrollment
-        |--------------------------------------------------------------------------
-        */
+
+        /* =========================================================
+        9. FETCH STUDENT SUBJECT ENROLLMENT
+        Institute filtering through students.institute_id
+        ========================================================= */
 
         $studentSubjects = [];
 
@@ -345,8 +338,27 @@ class RetotallingResultController extends Controller
 
             $studentSubjects = $studentSubjectsQuery
                 ->get()
+                ->filter(function ($studentSubject) use (
+                    $instituteId,
+                    $students
+                ) {
+
+                    if (!empty($instituteId)) {
+
+                        $student = $students->firstWhere(
+                            'id',
+                            $studentSubject->student_id
+                        );
+
+                        return $student &&
+                            $student->institute_id == $instituteId;
+                    }
+
+                    return true;
+                })
                 ->groupBy('student_id')
                 ->map(function ($items) {
+
                     return $items
                         ->pluck('subject_id')
                         ->unique()
@@ -356,47 +368,45 @@ class RetotallingResultController extends Controller
                 ->toArray();
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | 10. Render View
-        |--------------------------------------------------------------------------
-        */
+
+        /* =========================================================
+        10. PREPARE VIEW DATA
+        ========================================================= */
+
+        $viewData = compact(
+            'exam',
+            'course',
+            'scheme',
+            'batch',
+            'branch',
+            'className',
+            'subjects',
+            'students',
+            'marks',
+            'studentSubjects',
+            'retotallingSubjects',
+            'courseType'
+        );
+
+
+        /* =========================================================
+        11. RETURN VIEW
+        ========================================================= */
 
         if ($courseType == 'Annual Based') {
 
             return view(
                 'backend.retotalling-result.regular-result.external-marks.annual-result',
-                compact(
-                    'exam',
-                    'course',
-                    'branch',
-                    'className',
-                    'subjects',
-                    'students',
-                    'marks',
-                    'studentSubjects',
-                    'retotallingSubjects',
-                    'courseType'
-                )
+                $viewData
             );
         }
 
         return view(
             'backend.retotalling-result.regular-result.external-marks.result',
-            compact(
-                'exam',
-                'course',
-                'branch',
-                'className',
-                'subjects',
-                'students',
-                'marks',
-                'studentSubjects',
-                'retotallingSubjects',
-                'courseType'
-            )
+            $viewData
         );
     }
+
     public function regularExternalMarksSubjectWise(){
         $courses = Course::all();
         $exams = Exam::latest()->get();
@@ -408,12 +418,12 @@ class RetotallingResultController extends Controller
             'exam_id'              => 'required|exists:exams,id',
             'course_type'          => 'required|in:Semester Based,Annual Based',
             'course_id'            => 'required|exists:courses,id',
-            'scheme_id'            => 'nullable|exists:schemes,id',
+            'scheme_id'            => 'required|exists:schemes,id',
             'branch_id'            => 'required|exists:branches,id',
             'batch_id'             => 'required|exists:batches,id',
             'marks_type'           => 'required',
             'subject_id'           => 'required|exists:subjects,id',
-            'result_type'          => 'required|in:regular,supplementary',
+            'result_type'          => 'required|in:regular,reappear',
             'institute_id'         => 'nullable|exists:institutes,id',
             'semester_id'          => 'nullable|required_if:course_type,Semester Based|exists:semesters,id',
             'annual_semester_id'   => 'nullable|required_if:course_type,Annual Based|exists:annual_semesters,id',
@@ -451,17 +461,16 @@ class RetotallingResultController extends Controller
             $className = AnnualSemester::find($annualId)?->name ?? '';
         }
 
-        /*
-        |--------------------------------------------------------------------------
+        /*|--------------------------------------------------------------------------
         | Fetch Only Mapped Students
-        |--------------------------------------------------------------------------
-        */
+        |--------------------------------------------------------------------------*/
 
         $mappedStudentsQuery = ReTotallingStudent::query()
             ->with('student')
             ->where('exam_id', $examId)
-            ->where('result_type', $resultType) // Regular / Supplementary filter
+            ->where('result_type', $resultType)
             ->where('course_id', $courseId)
+            ->where('scheme_id', $schemeId)
             ->where('branch_id', $branchId)
             ->where('batch_id', $batchId)
 
@@ -486,20 +495,18 @@ class RetotallingResultController extends Controller
                     ->where('branch_id', $branchId)
                     ->where('batch_id', $batchId);
 
-                if ($schemeId) {
+                if ($schemeId !== null) {
                     $query->where('scheme_id', $schemeId);
                 }
 
-                if ($instituteId) {
+                if ($instituteId !== null) {
                     $query->where('institute_id', $instituteId);
                 }
 
                 if ($courseType === 'Semester Based') {
-                    $query->where('semester_id', $semesterId)
-                        ->whereNull('annual_semester_id');
+                    $query->whereNull('annual_semester_id');
                 } else {
-                    $query->where('annual_semester_id', $annualId)
-                        ->whereNull('semester_id');
+                    $query->whereNull('semester_id');
                 }
             });
 
@@ -600,7 +607,7 @@ class RetotallingResultController extends Controller
             'course_id'        => 'required|exists:courses,id',
             'branch_id'        => 'required|exists:branches,id',
             'batch_id'         => 'required|exists:batches,id',
-            'scheme_id'        => 'nullable|exists:schemes,id',
+            'scheme_id'        => 'required|exists:schemes,id',
             'institute_id'     => 'nullable|exists:institutes,id',
             'semester_id'      => 'nullable|exists:semesters,id',
             'annual_semester_id' => 'nullable|exists:annual_semesters,id',
@@ -677,9 +684,7 @@ class RetotallingResultController extends Controller
                 ->whereHas('student', function ($query) use (
                     $courseType,
                     $schemeId,
-                    $instituteId,
-                    $semesterId,
-                    $annualId
+                    $instituteId
                 ) {
                     $query->where('course_type', $courseType);
 
@@ -691,32 +696,17 @@ class RetotallingResultController extends Controller
                         $query->where('institute_id', $instituteId);
                     }
 
+                    // Student's current semester should not be checked here.
+                    // Only ensure the opposite term is NULL.
                     if ($courseType === 'Semester Based') {
 
-                        $query->where('semester_id', $semesterId)
-                            ->whereNull('annual_semester_id');
+                        $query->whereNull('annual_semester_id');
 
                     } else {
 
-                        $query->where('annual_semester_id', $annualId)
-                            ->whereNull('semester_id');
+                        $query->whereNull('semester_id');
                     }
                 });
-
-            if ($instituteId) {
-                $mappingQuery->where('institute_id', $instituteId);
-            }
-
-            if ($courseType === 'Semester Based') {
-
-                $mappingQuery->where('semester_id', $semesterId)
-                    ->whereNull('annual_semester_id');
-
-            } else {
-
-                $mappingQuery->where('annual_semester_id', $annualId)
-                    ->whereNull('semester_id');
-            }
 
             $mappingExists = $mappingQuery->exists();
 
@@ -1433,11 +1423,11 @@ class RetotallingResultController extends Controller
     }
 
     // Result Preview -------------------------------------------
-    public function regularResultPreviewSubjectWiseIndex(){
-        $courses = Course::all();
-        $exams = Exam::latest()->get();
-        return view('backend.retotalling-result.regular-result.result-preview.subjectwise-result.index', compact('courses', 'exams'));
-    }
+    // public function regularResultPreviewSubjectWiseIndex(){
+    //     $courses = Course::all();
+    //     $exams = Exam::latest()->get();
+    //     return view('backend.retotalling-result.regular-result.result-preview.subjectwise-result.index', compact('courses', 'exams'));
+    // }
 
     // public function fetchRegularResultPreviewSubjectWise(Request $request)
     // {
@@ -1577,7 +1567,6 @@ class RetotallingResultController extends Controller
     //         ->where('batch_id', $batchId)
     //         ->where('is_locked', 1)
     //         ->where('university_forword', 1)
-    //         ->whereIn('student_id', $retotallingStudentIds)
 
     //         ->when($schemeId, fn($q) => $q->where('scheme_id', $schemeId))
 
@@ -1617,7 +1606,6 @@ class RetotallingResultController extends Controller
     //         $endSemMarks = EndSemMark::where('exam_id', $examId)
     //             ->where('subject_id', $subjectId)
     //             ->where('is_locked', 1)
-    //             ->whereIn('student_id', $retotallingStudentIds)
 
     //             ->when($schemeId, fn($q) => $q->where('scheme_id', $schemeId))
 
@@ -1640,7 +1628,6 @@ class RetotallingResultController extends Controller
     //         $query = EndSemMark::where('exam_id', $examId)
     //             ->where('subject_id', $subjectId)
     //             ->where('is_locked', 1)
-    //             ->whereIn('student_id', $retotallingStudentIds)
 
     //             ->when($schemeId, fn($q) => $q->where('scheme_id', $schemeId))
 
@@ -1766,330 +1753,6 @@ class RetotallingResultController extends Controller
     //     )->render();
     // }
 
-    public function fetchRegularResultPreviewSubjectWise(Request $request)
-    {
-        $examId            = $request->exam_id;
-        $courseType        = $request->course_type;
-        $courseId          = $request->course_id;
-        $branchId          = $request->branch_id;
-        $batchId           = $request->batch_id;
-        $schemeId          = $request->scheme_id;
-        $semesterId        = $request->semester_id;
-        $annualSemesterId  = $request->annual_semester_id;
-        $instituteId       = $request->institute_id;
-        $subjectId         = $request->subject_id;
-        $studentId         = $request->student_id ?? null;
-
-        /*
-        =============================
-        BASIC DATA
-        =============================
-        */
-
-        $exam    = Exam::find($examId);
-        $course  = Course::find($courseId);
-        $branch  = Branch::find($branchId);
-        $batch   = Batch::find($batchId);
-        $subject = Subject::find($subjectId);
-
-        /*
-        =============================
-        PASS PERCENTAGE
-        =============================
-        */
-
-        $passPercentage = PassPercentage::where('course_id', $courseId)->first();
-
-        /*
-        =============================
-        SEMESTER
-        =============================
-        */
-
-        if ($courseType == "Semester Based") {
-
-            $semester  = Semester::find($semesterId);
-            $className = $semester->name . " Semester";
-
-        } else {
-
-            $semester  = AnnualSemester::find($annualSemesterId);
-            $className = $semester->name;
-        }
-
-        /*
-        =============================
-        RETOTALLING STUDENT IDS
-        =============================
-        */
-
-        $retotallingStudentsQuery = ReTotallingStudent::where('exam_id', $examId)
-            ->where('result_type', 'regular')
-            ->where('course_id', $courseId)
-            ->where('branch_id', $branchId)
-            ->where('batch_id', $batchId)
-
-            ->when($schemeId, fn($q) => $q->where('scheme_id', $schemeId))
-
-            ->when($instituteId, fn($q) => $q->where('institute_id', $instituteId))
-
-            ->when($studentId, fn($q) => $q->where('student_id', $studentId))
-
-            ->whereHas('subjects', function ($q) use ($subjectId) {
-                $q->where('subjects_id', $subjectId);
-            });
-
-        if ($courseType == 'Annual Based') {
-
-            $retotallingStudentsQuery
-                ->where('annual_semester_id', $annualSemesterId)
-                ->whereNull('semester_id');
-
-        } else {
-
-            $retotallingStudentsQuery
-                ->where('semester_id', $semesterId)
-                ->whereNull('annual_semester_id');
-        }
-
-        $retotallingStudentIds = $retotallingStudentsQuery
-            ->pluck('student_id')
-            ->unique()
-            ->values()
-            ->toArray();
-
-        /*
-        =============================
-        STUDENTS
-        =============================
-        */
-
-        $students = Student::whereIn('id', $retotallingStudentIds)
-            ->where('course_type', $courseType)
-            ->where('course_id', $courseId)
-            ->where('branch_id', $branchId)
-            ->where('batch_id', $batchId)
-
-            ->when($schemeId, fn($q) => $q->where('scheme_id', $schemeId))
-
-            // ->when($courseType == 'Semester Based', function ($q) use ($semesterId) {
-            //     $q->where('semester_id', $semesterId)
-            //       ->whereNull('annual_semester_id');
-            // })
-
-            // ->when($courseType == 'Annual Based', function ($q) use ($annualSemesterId) {
-            //     $q->where('annual_semester_id', $annualSemesterId)
-            //       ->whereNull('semester_id');
-            // })
-
-            ->when($instituteId, fn($q) => $q->where('institute_id', $instituteId))
-
-            ->when($studentId, fn($q) => $q->where('id', $studentId))
-
-            ->orderBy('institute_id')
-            ->orderBy('university_roll_no')
-            ->get();
-
-        /*
-        =============================
-        MID SEM MARKS
-        =============================
-        */
-
-        $midSemMarks = MidSemMark::where('exam_id', $examId)
-            ->where('subject_id', $subjectId)
-            ->where('course_type', $courseType)
-            ->where('course_id', $courseId)
-            ->where('branch_id', $branchId)
-            ->where('batch_id', $batchId)
-            ->where('is_locked', 1)
-            ->where('university_forword', 1)
-
-            ->when($schemeId, fn($q) => $q->where('scheme_id', $schemeId))
-
-            ->when($studentId, fn($q) => $q->where('student_id', $studentId))
-
-            ->when($courseType == 'Semester Based', function ($q) use ($semesterId) {
-
-                $q->where('semester_id', $semesterId)
-                ->whereNull('annual_semester_id');
-
-            })
-
-            ->when($courseType == 'Annual Based', function ($q) use ($annualSemesterId) {
-
-                $q->where('annual_semester_id', $annualSemesterId)
-                ->whereNull('semester_id');
-
-            })
-
-            ->get()
-            ->groupBy(['student_id', 'marks_type']);
-
-        /*
-        =============================
-        END SEM MARKS
-        =============================
-        */
-
-        if ($courseType == 'Annual Based') {
-
-            /*
-            --------------------------------
-            Annual : Multiple marks_type
-            --------------------------------
-            */
-
-            $endSemMarks = EndSemMark::where('exam_id', $examId)
-                ->where('subject_id', $subjectId)
-                ->where('is_locked', 1)
-
-                ->when($schemeId, fn($q) => $q->where('scheme_id', $schemeId))
-
-                ->when($studentId, fn($q) => $q->where('student_id', $studentId))
-
-                ->where('annual_semester_id', $annualSemesterId)
-                ->whereNull('semester_id')
-
-                ->get()
-                ->groupBy(['student_id', 'marks_type']);
-
-        } else {
-
-            /*
-            --------------------------------
-            Semester : Existing Logic
-            --------------------------------
-            */
-
-            $query = EndSemMark::where('exam_id', $examId)
-                ->where('subject_id', $subjectId)
-                ->where('is_locked', 1)
-
-                ->when($schemeId, fn($q) => $q->where('scheme_id', $schemeId))
-
-                ->when($studentId, fn($q) => $q->where('student_id', $studentId))
-
-                ->where('semester_id', $semesterId)
-                ->whereNull('annual_semester_id');
-
-            if ($course->course == 'Diploma') {
-
-                $endSemMarks = $query
-                    ->get()
-                    ->groupBy(['student_id', 'marks_type']);
-
-            } else {
-
-                $endSemMarks = $query
-                    ->get()
-                    ->keyBy('student_id');
-            }
-        }
-
-        /*
-        =============================
-        ACADEMIC ADJUSTMENTS
-        =============================
-        */
-
-        $academicAdjustments = AcademicAdjustment::where('exam_id', $examId)
-
-            ->where('course_type', $courseType)
-
-            ->where('course_id', $courseId)
-            ->where('branch_id', $branchId)
-            ->where('batch_id', $batchId)
-
-            ->where('subject_id', $subjectId)
-
-            ->when($schemeId, fn($q) => $q->where('scheme_id', $schemeId))
-
-            ->when($studentId, fn($q) => $q->where('student_id', $studentId))
-
-            ->when($courseType == 'Semester Based', function ($q) use ($semesterId) {
-
-                $q->where('semester_id', $semesterId)
-                ->whereNull('annual_semester_id');
-
-            })
-
-            ->when($courseType == 'Annual Based', function ($q) use ($annualSemesterId) {
-
-                $q->where('annual_semester_id', $annualSemesterId)
-                ->whereNull('semester_id');
-
-            })
-
-            ->get();
-
-        $adjustmentMarks = [];
-
-        foreach ($academicAdjustments as $adjustment) {
-
-            $adjustmentMarks
-                [$adjustment->student_id]
-                [$adjustment->marks_type]
-                = $adjustment->adjustment_marks;
-        }
-
-        /*
-        =============================
-        STUDENT SUBJECTS
-        =============================
-        */
-
-        $studentSubjects = StudentSubject::where([
-            'subject_id'  => $subjectId,
-            'course_type' => $courseType,
-            'course_id'   => $courseId,
-            'branch_id'   => $branchId,
-        ])
-
-        ->when($schemeId, fn($q) => $q->where('scheme_id', $schemeId))
-
-        ->when($courseType == 'Semester Based', function ($q) use ($semesterId) {
-
-            $q->where('semester_id', $semesterId);
-
-        }, function ($q) use ($annualSemesterId) {
-
-            $q->where('annual_semester_id', $annualSemesterId);
-
-        })
-
-        ->pluck('student_id')
-        ->toArray();
-
-        /*
-        =============================
-        VIEW
-        =============================
-        */
-
-        $view = $courseType == 'Annual Based'
-            ? 'backend.retotalling-result.regular-result.result-preview.subjectwise-result.annual-result'
-            : 'backend.retotalling-result.regular-result.result-preview.subjectwise-result.result';
-
-        return view(
-            $view,
-            compact(
-                'exam',
-                'course',
-                'branch',
-                'batch',
-                'subject',
-                'students',
-                'midSemMarks',
-                'endSemMarks',
-                'className',
-                'passPercentage',
-                'studentSubjects',
-                'adjustmentMarks'
-            )
-        )->render();
-    }
-
     public function overallRegularResultPreviewIndex(){
         $courses = Course::all();
         $exams = Exam::latest()->get();
@@ -2099,342 +1762,767 @@ class RetotallingResultController extends Controller
 
     public function fetchOverallRegularResultPreview(Request $request)
     {
-        $examId            = $request->exam_id;
-        $courseType        = $request->course_type;
-        $courseId          = $request->course_id;
-        $branchId          = $request->branch_id;
-        $batchId           = $request->batch_id;
-        $schemeId          = $request->scheme_id;
-        $semesterId        = $request->semester_id;
-        $annualSemesterId  = $request->annual_semester_id;
-        $instituteId       = $request->institute_id;
+        $examId       = (int) $request->exam_id;
+        $courseType   = $request->course_type;
+        $courseId     = (int) $request->course_id;
+        $schemeId     = $request->scheme_id ? (int) $request->scheme_id : null;
+        $branchId     = (int) $request->branch_id;
+        $semesterId   = (int) $request->semester_id;
+        $batchId     = (int) $request->batch_id;
 
-        /*
-        =============================
-        BASIC DATA
-        =============================
-        */
-        $grades = MarksGrade::where('course_id', $courseId)->get();
-        $exam   = Exam::find($examId);
-        $course = Course::find($courseId);
-        $branch = Branch::find($branchId);
-        $batch  = Batch::find($batchId);
+        $instituteId = $request->institute_id !== null
+            && $request->institute_id !== ''
+            ? (int) $request->institute_id
+            : null;
 
-        /*
-        =============================
-        PASS %
-        =============================
-        */
-        $passPercentage     = PassPercentage::where('course_id', $courseId)->first();
-        $overallPassPercent = $passPercentage->overall_pass_percentage ?? 50;
-        $theoryMinPercent   = $passPercentage->theory_min_percentage ?? 20;
-
-        /*
-        =============================
-        SEM / ANNUAL NAME
-        =============================
-        */
-        if ($courseType == "Semester Based") {
-            $semester  = Semester::find($semesterId);
-            $className = $semester->name . " Semester";
-        } else {
-            $semester  = AnnualSemester::find($annualSemesterId);
-            $className = $semester->name;
+        if ($courseType !== 'Semester Based') {
+            return response('Only Semester Based result is supported.', 422);
         }
 
         /*
-        =============================
-        SUBJECTS
-        =============================
+        |--------------------------------------------------------------------------
+        | BASIC DATA
+        |--------------------------------------------------------------------------
         */
-        $subjects = Subject::where('course_id', $courseId)
+
+        $exam    = \App\Models\Exam::findOrFail($examId);
+        $course  = \App\Models\Course::findOrFail($courseId);
+        $branch  = \App\Models\Branch::findOrFail($branchId);
+        $scheme  = \App\Models\Scheme::findOrFail($schemeId);
+        $batch   = \App\Models\Batch::findOrFail($batchId);
+        $semester = \App\Models\Semester::findOrFail($semesterId);
+
+        $className = ($semester->name ?? '') . ' Semester';
+
+        /*
+        |--------------------------------------------------------------------------
+        | PASS PERCENTAGE
+        |--------------------------------------------------------------------------
+        */
+
+        $passPercentage = \App\Models\PassPercentage::where('course_id', $courseId)
+            ->where('scheme_id', $schemeId)
+            ->first();
+
+        $overallPassPercent = (float) ($passPercentage->overall_pass_percentage ?? 40);
+        $percentageType = $passPercentage->percentage_type ?? 'Separate';
+
+        /*
+        |--------------------------------------------------------------------------
+        | SUBJECTS
+        |--------------------------------------------------------------------------
+        */
+
+        $subjects = \App\Models\Subject::where('course_type', $courseType)
+            ->where('course_id', $courseId)
             ->where('branch_id', $branchId)
-            // ->where('is_nc', false)
+            ->where('scheme_id', $schemeId)
+            ->where('semester_id', $semesterId)
+            ->whereNull('annual_semester_id')
+            ->orderBy('orders')
+            ->orderBy('id')
+            ->get();
 
-            ->when($schemeId, fn($q) => $q->where('scheme_id', $schemeId))
+        $subjectIds = $subjects->pluck('id')->toArray();
 
-            ->when($courseType == 'Semester Based', function ($q) use ($semesterId) {
-                $q->where('semester_id', $semesterId)
-                    ->whereNull('annual_semester_id');
-            })
+        /*
+        |--------------------------------------------------------------------------
+        | GRADES
+        |--------------------------------------------------------------------------
+        */
 
-            ->when($courseType == 'Annual Based', function ($q) use ($annualSemesterId) {
-                $q->where('annual_semester_id', $annualSemesterId)
-                    ->whereNull('semester_id');
-            })
-
-            ->orderBy('subject_code')
+        $grades = \App\Models\MarksGrade::where('course_id', $courseId)
+            ->where('scheme_id', $schemeId)
+            ->orderBy('percent_from')
             ->get();
 
         /*
-        =============================
-        MID SEM MARKS
-        =============================
+        |--------------------------------------------------------------------------
+        | RETOTALLING APPLICATIONS
+        |--------------------------------------------------------------------------
+        | Only students who applied for retotalling.
+        | result_type assumed to be Regular.
+        |--------------------------------------------------------------------------
         */
-        $midSemMarks = MidSemMark::where('exam_id', $examId)
-            ->where('course_type', $courseType)
+
+        $retotallingApplications = \App\Models\ReTotallingStudent::with([
+            'student',
+            'subjects',
+        ])
+            ->where('exam_id', $examId)
+            ->where('result_type', 'Regular')
             ->where('course_id', $courseId)
             ->where('branch_id', $branchId)
+            ->where('scheme_id', $schemeId)
+            ->where('semester_id', $semesterId)
             ->where('batch_id', $batchId)
-            ->where('is_locked', 1)
-            ->where('university_forword', 1)
-
-            ->when($schemeId, fn($q) => $q->where('scheme_id', $schemeId))
-
-            ->when($courseType == 'Semester Based', function ($q) use ($semesterId) {
-                $q->where('semester_id', $semesterId)
-                    ->whereNull('annual_semester_id');
+            ->when($instituteId !== null, function ($q) use ($instituteId) {
+                $q->where('institute_id', $instituteId);
             })
-
-            ->when($courseType == 'Annual Based', function ($q) use ($annualSemesterId) {
-                $q->where('annual_semester_id', $annualSemesterId)
-                    ->whereNull('semester_id');
-            })
-
-            ->get()
-            ->groupBy(['student_id', 'subject_id', 'marks_type']);
+            ->get();
 
         /*
-        =============================
-        END SEM MARKS (KEY FIX)
-        =============================
+        |--------------------------------------------------------------------------
+        | STUDENT RETOTALLING SUBJECT MAP
+        |--------------------------------------------------------------------------
+        | student_id => [subject_id, subject_id, ...]
+        |--------------------------------------------------------------------------
         */
-        if ($courseType == 'Annual Based') {
 
-            $endSemMarks = EndSemMark::where('exam_id', $examId)
-                ->where('is_locked', 1)
+        $retotallingSubjectMap = [];
 
-                ->when($schemeId, fn($q) => $q->where('scheme_id', $schemeId))
-
-                ->where('annual_semester_id', $annualSemesterId)
-                ->whereNull('semester_id')
-
-                ->get()
-                ->groupBy(['student_id', 'subject_id', 'marks_type']);
-
-        } else {
-
-            // $endSemMarks = EndSemMark::where('exam_id', $examId)
-            //     ->where('is_locked', 1)
-            //     ->get()
-            //     ->groupBy(['student_id', 'subject_id']);
-
-            $query = EndSemMark::where('exam_id', $examId)
-                ->where('is_locked', 1)
-
-                ->when($schemeId, fn($q) => $q->where('scheme_id', $schemeId))
-
-                ->where('semester_id', $semesterId)
-                ->whereNull('annual_semester_id');
-
-            if ($course->course == 'Diploma') {
-
-                $endSemMarks = $query
-                    ->get()
-                    ->groupBy(['student_id', 'subject_id', 'marks_type']);
-
-            } else {
-
-                // Existing UG Logic
-                $endSemMarks = $query
-                    ->get()
-                    ->groupBy(['student_id', 'subject_id']);
-            }
+        foreach ($retotallingApplications as $application) {
+            $retotallingSubjectMap[$application->student_id] = $application->subjects
+                ->pluck('subjects_id')
+                ->unique()
+                ->values()
+                ->toArray();
         }
 
         /*
-        =============================
-        ACADEMIC ADJUSTMENTS
-        =============================
+        |--------------------------------------------------------------------------
+        | REGULAR EXAM FORMS - VALIDATE ENROLLMENT
+        |--------------------------------------------------------------------------
+        | Retotalling applicants must also have a valid paid Regular exam form
+        | and be enrolled in at least one subject of the current semester.
+        |--------------------------------------------------------------------------
         */
-        $academicAdjustments = AcademicAdjustment::where('exam_id', $examId)
 
-            ->where('adjustment_scope', 'external')
-
-            ->when($schemeId, fn($q) => $q->where('scheme_id', $schemeId))
-
-            ->when($courseType == 'Semester Based', function ($q) use ($semesterId) {
-                $q->where('semester_id', $semesterId)
-                    ->whereNull('annual_semester_id');
-            })
-
-            ->when($courseType == 'Annual Based', function ($q) use ($annualSemesterId) {
-                $q->where('annual_semester_id', $annualSemesterId)
-                    ->whereNull('semester_id');
-            })
-
-            ->get()
-            ->groupBy(['student_id', 'subject_id', 'marks_type']);
-
-        /*
-        =============================
-        STUDENT SUBJECTS
-        =============================
-        */
-        $studentSubjects = StudentSubject::where('course_type', $courseType)
+        $forms = \App\Models\ExaminationForm::with([
+            'student',
+            'choosedSubjects',
+        ])
+            ->where('exam_id', $examId)
+            ->where('exam_type', 'Regular')
             ->where('course_id', $courseId)
             ->where('branch_id', $branchId)
-
-            ->when($schemeId, fn($q) => $q->where('scheme_id', $schemeId))
-
-            ->when($courseType == 'Semester Based', function ($q) use ($semesterId) {
-                $q->where('semester_id', $semesterId)
-                    ->whereNull('annual_semester_id');
+            ->where('scheme_id', $schemeId)
+            ->where('semester_id', $semesterId)
+            ->where('batch_id', $batchId)
+            ->where('payment_status', 1)
+            ->when($instituteId !== null, function ($q) use ($instituteId) {
+                $q->where('institute_id', $instituteId);
             })
-
-            ->when($courseType == 'Annual Based', function ($q) use ($annualSemesterId) {
-                $q->where('annual_semester_id', $annualSemesterId)
-                    ->whereNull('semester_id');
+            ->get()
+            ->filter(function ($form) use ($subjectIds, $retotallingSubjectMap) {
+                return $form->student
+                    && isset($retotallingSubjectMap[$form->student_id])
+                    && $form->choosedSubjects->pluck('subject_id')
+                        ->intersect($subjectIds)
+                        ->isNotEmpty();
             })
+            ->unique('student_id')
+            ->values();
 
+        /*
+        |--------------------------------------------------------------------------
+        | ONLY RETOTALLING APPLICANTS
+        |--------------------------------------------------------------------------
+        */
+
+        $students = $forms->pluck('student')
+            ->filter()
+            ->unique('id')
+            ->sortBy('university_roll_no')
+            ->values();
+
+        $studentIds = $students->pluck('id')->toArray();
+
+        /*
+        |--------------------------------------------------------------------------
+        | REMOVE APPLICATIONS FOR STUDENTS NOT INCLUDED IN REGULAR FORMS
+        |--------------------------------------------------------------------------
+        */
+
+        $retotallingSubjectMap = array_intersect_key(
+            $retotallingSubjectMap,
+            array_flip($studentIds)
+        );
+
+        /*
+        |--------------------------------------------------------------------------
+        | INSTITUTES
+        |--------------------------------------------------------------------------
+        */
+
+        $institutes = \App\Models\Institute::whereIn(
+            'id',
+            $students->pluck('institute_id')->filter()->unique()
+        )->pluck('name', 'id');
+
+        /*
+        |--------------------------------------------------------------------------
+        | CURRENT INTERNAL MARKS - REGULAR
+        |--------------------------------------------------------------------------
+        */
+
+        $midSemMarks = \App\Models\MidSemMark::where('exam_id', $examId)
+            ->where('course_type', $courseType)
+            ->where('course_id', $courseId)
+            ->where('branch_id', $branchId)
+            ->where('scheme_id', $schemeId)
+            ->where('semester_id', $semesterId)
+            ->where('batch_id', $batchId)
+            ->where('marks_type', 'internal')
+            ->whereIn('student_id', $studentIds)
+            ->whereIn('subject_id', $subjectIds)
             ->get()
             ->groupBy('student_id');
 
         /*
-        =============================
-        RETOTALLING STUDENTS & SUBJECTS
-        =============================
-        */
-        $retotallingStudents = ReTotallingStudent::with('subjects')
-
-            ->where('exam_id', $examId)
-            ->where('result_type', 'regular')
-            ->where('course_id', $courseId)
-            ->where('branch_id', $branchId)
-            ->where('batch_id', $batchId)
-
-            ->when($schemeId, fn($q) => $q->where('scheme_id', $schemeId))
-
-            ->when($instituteId, fn($q) => $q->where('institute_id', $instituteId))
-
-            ->when($courseType == 'Semester Based', function ($q) use ($semesterId) {
-                $q->where('semester_id', $semesterId)
-                    ->whereNull('annual_semester_id');
-            })
-
-            ->when($courseType == 'Annual Based', function ($q) use ($annualSemesterId) {
-                $q->where('annual_semester_id', $annualSemesterId)
-                    ->whereNull('semester_id');
-            })
-
-            ->get();
-
-        /*
-        =============================
-        ONLY RETOTALLING APPLIED STUDENTS
-        =============================
+        |--------------------------------------------------------------------------
+        | CURRENT EXTERNAL MARKS
+        |--------------------------------------------------------------------------
         */
 
-        $appliedStudentIds = $retotallingStudents
-            ->pluck('student_id')
-            ->unique()
-            ->values()
-            ->toArray();
-
-        $students = Student::where('course_type', $courseType)
+        $endSemMarks = \App\Models\EndSemMark::where('exam_id', $examId)
+            ->where('course_type', $courseType)
             ->where('course_id', $courseId)
             ->where('branch_id', $branchId)
+            ->where('scheme_id', $schemeId)
+            ->where('semester_id', $semesterId)
             ->where('batch_id', $batchId)
-
-            ->whereIn('id', $appliedStudentIds)
-
-            ->when($schemeId, fn($q) => $q->where('scheme_id', $schemeId))
-
-            ->when($instituteId, fn($q) => $q->where('institute_id', $instituteId))
-
-            ->orderBy('institute_id')
-            ->orderBy('university_roll_no')
-            ->get();
+            ->where('marks_type', 'external')
+            ->whereIn('student_id', $studentIds)
+            ->whereIn('subject_id', $subjectIds)
+            ->get()
+            ->groupBy('student_id');
 
         /*
-        =============================
-        PREVIOUS SEMESTER GP SHEET
-        =============================
+        |--------------------------------------------------------------------------
+        | PREVIOUS SEMESTERS - REGULAR + REAPPEAR
+        |--------------------------------------------------------------------------
         */
 
         $previousGpSheets = collect();
+        $previousReappearGpSheets = collect();
 
-        $missingPublishedSemesters = [];
+        $previousExamIds = getPreviousExamSessionIds($examId);
 
-        if ($courseType == 'Semester Based' && $semesterId > 1) {
+        // Reappear data can be uploaded in current exam session as well.
+        $reappearExamIds = array_values(array_unique(
+            array_merge($previousExamIds, [$examId])
+        ));
 
-            // Current semester se pehle ke sab semester
-            $requiredPreviousSemesters = range(1, $semesterId - 1);
+        $previousSemesters = $semesterId > 1
+            ? range(1, $semesterId - 1)
+            : [];
 
-            // Jitne semester ka result save/publish hua hai
-            $publishedSemesters = ResultGpSheet::where('course_type', $courseType)
+        if (!empty($previousSemesters)) {
+
+            $previousGpSheets = \App\Models\ResultGpSheet::where('course_type', $courseType)
                 ->where('course_id', $courseId)
                 ->where('branch_id', $branchId)
+                ->where('scheme_id', $schemeId)
                 ->where('batch_id', $batchId)
+                ->whereIn('semester_id', $previousSemesters)
+                ->whereIn('exam_id', $previousExamIds)
+                ->when($instituteId !== null, function ($q) use ($instituteId) {
+                    $q->where('institute_id', $instituteId);
+                })
+                ->get()
+                ->groupBy('student_id');
 
-                ->when($schemeId, fn($q) => $q->where('scheme_id', $schemeId))
-                ->when($instituteId, fn($q) => $q->where('institute_id', $instituteId))
-
-                ->whereIn('semester_id', $requiredPreviousSemesters)
-
-                ->select('semester_id')
-                ->distinct()
-                ->pluck('semester_id')
-                ->toArray();
-
-            // Missing semester find karo
-            $missingPublishedSemesters = array_values(array_diff(
-                $requiredPreviousSemesters,
-                $publishedSemesters
-            ));
-
-            // Previous GP Sheet
-            $previousGpSheets = ResultGpSheet::with('subject')
-                ->where('course_type', $courseType)
+            $previousReappearGpSheets = \App\Models\ReappearResultGpSheet::where('course_type', $courseType)
                 ->where('course_id', $courseId)
                 ->where('branch_id', $branchId)
+                ->where('scheme_id', $schemeId)
                 ->where('batch_id', $batchId)
-
-                ->when($schemeId, fn($q) => $q->where('scheme_id', $schemeId))
-                ->when($instituteId, fn($q) => $q->where('institute_id', $instituteId))
-
-                ->whereIn('semester_id', $requiredPreviousSemesters)
-
+                ->whereIn('semester_id', $previousSemesters)
+                ->whereIn('exam_id', $reappearExamIds)
+                ->when($instituteId !== null, function ($q) use ($instituteId) {
+                    $q->where('institute_id', $instituteId);
+                })
                 ->get()
                 ->groupBy('student_id');
         }
 
         /*
-        =============================
-        VIEW
-        =============================
+        |--------------------------------------------------------------------------
+        | HELPER: GET GRADE BY PERCENTAGE
+        |--------------------------------------------------------------------------
         */
 
-        $view = $courseType == 'Annual Based'
-            ? 'backend.retotalling-result.regular-result.result-preview.overall-result.annual-result'
-            : 'backend.retotalling-result.regular-result.result-preview.overall-result.result';
+        $getGrade = function ($percentage) use ($grades) {
+            return $grades->first(function ($grade) use ($percentage) {
+                return $percentage >= (float) $grade->percent_from
+                    && $percentage <= (float) $grade->percent_upto;
+            });
+        };
+
+        /*
+        |--------------------------------------------------------------------------
+        | HELPER: MARK VALUE
+        |--------------------------------------------------------------------------
+        */
+
+        $markValue = function ($mark) {
+            if (!$mark) {
+                return null;
+            }
+
+            if (strtolower(trim($mark->exam_status ?? '')) !== 'present') {
+                return 0;
+            }
+
+            return (float) ($mark->obtained_marks ?? 0)
+                + (float) ($mark->grace_marks ?? 0);
+        };
+
+        /*
+        |--------------------------------------------------------------------------
+        | HELPER: SPECIAL STATUS
+        |--------------------------------------------------------------------------
+        */
+
+        $specialStatus = function ($mark) {
+            if (!$mark) {
+                return '';
+            }
+
+            $status = strtoupper(trim($mark->exam_status ?? ''));
+
+            if (in_array($status, ['AB', 'UMC', 'I/F'])) {
+                return $status;
+            }
+
+            return '';
+        };
+
+        /*
+        |--------------------------------------------------------------------------
+        | HELPER: RETOTALING VALUE
+        |--------------------------------------------------------------------------
+        */
+
+        $retotalValue = function ($normal, $retotal) {
+            if ($retotal !== null && $retotal !== '' && (float) $retotal != 0) {
+                return (float) $retotal;
+            }
+
+            return (float) ($normal ?? 0);
+        };
+
+        /*
+        |--------------------------------------------------------------------------
+        | PREPARE RESULT DATA
+        |--------------------------------------------------------------------------
+        */
+
+        $marks = [];
+
+        foreach ($students as $student) {
+
+            $studentId = $student->id;
+
+            $studentInternal = $midSemMarks->get($studentId, collect())
+                ->keyBy('subject_id');
+
+            $studentExternal = $endSemMarks->get($studentId, collect())
+                ->keyBy('subject_id');
+
+            // Subjects student actually applied for retotalling
+            $studentRetotallingSubjects = $retotallingSubjectMap[$studentId] ?? [];
+
+            $studentSubjects = [];
+
+            $currentCreditPoint = 0;
+            $currentGradePointEarn = 0;
+
+            $failedSubjects = [];
+
+            foreach ($subjects as $subject) {
+
+                $internalRecord = $studentInternal->get($subject->id);
+                $externalRecord = $studentExternal->get($subject->id);
+
+                $hasInternal = !is_null($internalRecord);
+                $hasExternal = !is_null($externalRecord);
+
+                // Both missing -> blank and not counted in credits.
+                if (!$hasInternal && !$hasExternal) {
+                    continue;
+                }
+
+                $credits = (float) ($subject->credits ?? 0);
+
+                /*
+                |--------------------------------------------------------------------------
+                | INTERNAL - ALWAYS REGULAR MARKS
+                |--------------------------------------------------------------------------
+                */
+
+                $internalValue = $markValue($internalRecord);
+                $internalSpecial = $specialStatus($internalRecord);
+
+                /*
+                |--------------------------------------------------------------------------
+                | EXTERNAL - RETOTALLING ONLY FOR APPLIED SUBJECTS
+                |--------------------------------------------------------------------------
+                | Retotaling marks are used only if:
+                | 1. Student applied for this subject.
+                | 2. retotalling_marks_locked = 1.
+                | 3. retotalling_obtained_marks is not null/blank.
+                |--------------------------------------------------------------------------
+                */
+
+                $externalValue = $markValue($externalRecord);
+                $externalSpecial = $specialStatus($externalRecord);
+
+                $retotallingApplied = false;
+
+                if (
+                    $externalRecord
+                    && in_array($subject->id, $studentRetotallingSubjects)
+                    && (int) ($externalRecord->retotalling_marks_locked ?? 0) === 1
+                    && $externalRecord->retotalling_obtained_marks !== null
+                    && $externalRecord->retotalling_obtained_marks !== ''
+                ) {
+                    // Use locked retotalling obtained marks, retain regular grace marks.
+                    if (strtolower(trim($externalRecord->exam_status ?? '')) === 'present') {
+                        $externalValue = (float) $externalRecord->retotalling_obtained_marks
+                            + (float) ($externalRecord->grace_marks ?? 0);
+                    } else {
+                        $externalValue = 0;
+                    }
+
+                    $retotallingApplied = true;
+                }
+
+                $total = null;
+                $percentage = 0;
+                $grade = '';
+                $gradePoint = 0;
+                $creditScore = 0;
+                $result = 'FAIL';
+
+                /*
+                |--------------------------------------------------------------------------
+                | EXTERNAL SPECIAL STATUS - HIGHEST PRIORITY
+                |--------------------------------------------------------------------------
+                */
+
+                if ($externalSpecial !== '') {
+
+                    $total = $externalSpecial;
+                    $grade = $externalSpecial;
+                    $result = $externalSpecial;
+
+                } elseif (!$hasInternal || !$hasExternal) {
+
+                    // Only one mark component exists -> R.
+                    $total = 0;
+                    $grade = 'R';
+                    $result = 'R';
+
+                } elseif (
+                    $internalSpecial !== ''
+                    && $externalSpecial !== ''
+                    && $internalSpecial === $externalSpecial
+                ) {
+
+                    $total = $externalSpecial;
+                    $grade = $externalSpecial;
+                    $result = $externalSpecial;
+
+                } elseif ($percentageType === 'Aggregate') {
+
+                    $total = (float) $internalValue + (float) $externalValue;
+
+                    $maximum = (float) ($subject->internal_marks ?? 0)
+                        + (float) ($subject->external_marks ?? 0);
+
+                    $percentage = $maximum > 0
+                        ? ($total * 100) / $maximum
+                        : 0;
+
+                    $matchedGrade = $getGrade($percentage);
+
+                    if ($percentage < $overallPassPercent || !$matchedGrade) {
+                        $grade = 'R';
+                        $result = 'FAIL';
+                    } else {
+                        $grade = $matchedGrade->grade_name;
+                        $gradePoint = (float) $matchedGrade->grade_point;
+                        $result = 'PASS';
+                    }
+
+                } else {
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | SEPARATE PASS
+                    |--------------------------------------------------------------------------
+                    */
+
+                    $total = (float) $internalValue + (float) $externalValue;
+
+                    $internalPass = (float) ($subject->internal_marks ?? 0)
+                        * $overallPassPercent / 100;
+
+                    $externalPass = (float) ($subject->external_marks ?? 0)
+                        * $overallPassPercent / 100;
+
+                    $internalPassed = $internalValue >= $internalPass;
+                    $externalPassed = $externalValue >= $externalPass;
+
+                    $maximum = (float) ($subject->internal_marks ?? 0)
+                        + (float) ($subject->external_marks ?? 0);
+
+                    $percentage = $maximum > 0
+                        ? ($total * 100) / $maximum
+                        : 0;
+
+                    $matchedGrade = $getGrade($percentage);
+
+                    if (!$externalPassed && !$internalPassed) {
+                        $grade = 'I/F';
+                        $result = 'FAIL';
+                    } elseif (!$externalPassed && $internalPassed) {
+                        $grade = 'R';
+                        $result = 'FAIL';
+                    } elseif ($externalPassed && !$internalPassed) {
+                        $grade = 'I';
+                        $result = 'FAIL';
+                    } else {
+                        $grade = $matchedGrade->grade_name ?? 'R';
+                        $gradePoint = (float) ($matchedGrade->grade_point ?? 0);
+                        $result = ($grade === 'R' || $grade === 'F')
+                            ? 'FAIL'
+                            : 'PASS';
+                    }
+                }
+
+                /*
+                |--------------------------------------------------------------------------
+                | SPECIAL INTERNAL STATUS FALLBACK
+                |--------------------------------------------------------------------------
+                */
+
+                if ($externalSpecial === '' && $internalSpecial !== '' && $result !== 'PASS') {
+                    $total = $internalSpecial;
+                    $grade = $internalSpecial;
+                    $result = $internalSpecial;
+                    $gradePoint = 0;
+                    $percentage = 0;
+                }
+
+                /*
+                |--------------------------------------------------------------------------
+                | R / F GRADE POINT
+                |--------------------------------------------------------------------------
+                */
+
+                if (in_array($grade, ['R', 'F', 'AB', 'UMC', 'I/F', 'I'])) {
+                    $gradePoint = 0;
+                }
+
+                if ($result !== 'PASS') {
+                    $gradePoint = 0;
+                }
+
+                $creditScore = $gradePoint * $credits;
+
+                $currentCreditPoint += $credits;
+                $currentGradePointEarn += $creditScore;
+
+                if ($result !== 'PASS') {
+                    $failedSubjects[] = $subject->subject_code;
+                }
+
+                $studentSubjects[$subject->id] = [
+                    'internal_marks' => $internalSpecial ?: $internalValue,
+                    'external_marks' => $externalSpecial ?: $externalValue,
+                    'total' => $total,
+                    'percentage' => $percentage,
+                    'grade' => $grade,
+                    'grade_point' => $gradePoint,
+                    'credit_score' => $creditScore,
+                    'result' => $result,
+                    'retotalling_applied' => $retotallingApplied,
+                ];
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | SGPA
+            |--------------------------------------------------------------------------
+            */
+
+            $sgpa = $currentCreditPoint > 0
+                ? round($currentGradePointEarn / $currentCreditPoint, 2)
+                : 0;
+
+            /*
+            |--------------------------------------------------------------------------
+            | PREVIOUS SEMESTER CREDIT / EARN
+            |--------------------------------------------------------------------------
+            */
+
+            $previousCreditPoint = 0;
+            $previousGradePointEarn = 0;
+            $previousResultStatus = 'N/A';
+
+            if ($semesterId > 1) {
+
+                $regularRows = $previousGpSheets->get($studentId, collect());
+                $reappearRows = $previousReappearGpSheets->get($studentId, collect());
+
+                // Resolve previous semester + subject independently.
+                foreach ($previousSemesters as $prevSem) {
+
+                    $regularSemRows = $regularRows->where('semester_id', $prevSem)
+                        ->keyBy('subject_id');
+
+                    $reappearSemRows = $reappearRows->where('semester_id', $prevSem)
+                        ->keyBy('subject_id');
+
+                    $allPreviousSubjectIds = $regularSemRows->keys()
+                        ->merge($reappearSemRows->keys())
+                        ->unique();
+
+                    foreach ($allPreviousSubjectIds as $prevSubjectId) {
+
+                        $row = $reappearSemRows->get($prevSubjectId)
+                            ?? $regularSemRows->get($prevSubjectId);
+
+                        if (!$row) {
+                            continue;
+                        }
+
+                        $credits = $retotalValue(
+                            $row->credits ?? 0,
+                            $row->retotalling_credits ?? null
+                        );
+
+                        $gpEarn = $retotalValue(
+                            $row->credit_score ?? 0,
+                            $row->retotalling_credit_score ?? null
+                        );
+
+                        $previousCreditPoint += $credits;
+                        $previousGradePointEarn += $gpEarn;
+                    }
+                }
+
+                $previousResultStatus = 'PASS';
+
+                foreach ($previousSemesters as $prevSem) {
+
+                    $regularSemRows = $regularRows->where('semester_id', $prevSem)
+                        ->keyBy('subject_id');
+
+                    $reappearSemRows = $reappearRows->where('semester_id', $prevSem)
+                        ->keyBy('subject_id');
+
+                    $allPreviousSubjectIds = $regularSemRows->keys()
+                        ->merge($reappearSemRows->keys())
+                        ->unique();
+
+                    foreach ($allPreviousSubjectIds as $prevSubjectId) {
+
+                        $row = $reappearSemRows->get($prevSubjectId)
+                            ?? $regularSemRows->get($prevSubjectId);
+
+                        $resultValue = $row->retotalling_result
+                            ?: $row->result;
+
+                        if (
+                            $resultValue !== 'PASS'
+                            && !in_array($resultValue, ['AB', 'UMC', 'I/F'])
+                        ) {
+                            $previousResultStatus = 'FAIL';
+                        }
+
+                        if (in_array($resultValue, ['AB', 'UMC', 'I/F'])) {
+                            $previousResultStatus = 'FAIL';
+                        }
+                    }
+                }
+
+            } else {
+
+                // First semester: Previous = Current
+                $previousCreditPoint = $currentCreditPoint;
+                $previousGradePointEarn = $currentGradePointEarn;
+                $previousResultStatus = empty($failedSubjects) ? 'PASS' : 'FAIL';
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | CGPA
+            |--------------------------------------------------------------------------
+            */
+
+            $cgpaDenominator = $currentCreditPoint + $previousCreditPoint;
+
+            $cgpa = $cgpaDenominator > 0
+                ? round(
+                    ($currentGradePointEarn + $previousGradePointEarn)
+                        / $cgpaDenominator,
+                    2
+                )
+                : 0;
+
+            /*
+            |--------------------------------------------------------------------------
+            | RESULT / REMARK
+            |--------------------------------------------------------------------------
+            */
+
+            $overallResult = implode(', ', $failedSubjects);
+
+            $remark = empty($failedSubjects) ? 'PASS' : 'FAIL';
+
+            /*
+            |--------------------------------------------------------------------------
+            | STUDENT DATA
+            |--------------------------------------------------------------------------
+            */
+
+            $marks[$studentId] = [
+                'subjects' => $studentSubjects,
+                'result' => $overallResult,
+                'current_credit_point' => $currentCreditPoint,
+                'current_grade_point_earn' => $currentGradePointEarn,
+                'sgpa' => $sgpa,
+                'previous_credit_point' => $previousCreditPoint,
+                'previous_grade_point_earn' => $previousGradePointEarn,
+                'cgpa' => $cgpa,
+                'previous_result_status' => $previousResultStatus,
+                'remark' => $remark,
+            ];
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | VIEW
+        |--------------------------------------------------------------------------
+        */
 
         return view(
-            $view,
+            'backend.retotalling-result.regular-result.result-preview.overall-result.result',
             compact(
                 'exam',
-                'courseType',
                 'course',
-                'schemeId',
                 'branch',
+                'scheme',
                 'batch',
                 'semester',
-                'semesterId',
-                'annualSemesterId',
-                'instituteId',
+                'className',
                 'subjects',
                 'students',
                 'midSemMarks',
                 'endSemMarks',
-                'overallPassPercent',
-                'theoryMinPercent',
-                'className',
                 'grades',
-                'studentSubjects',
-                'academicAdjustments',
+                'marks',
+                'institutes',
+                'overallPassPercent',
+                'percentageType',
                 'previousGpSheets',
-                'missingPublishedSemesters',
-                'retotallingStudents'
+                'previousReappearGpSheets',
+                'previousSemesters',
+                'instituteId'
             )
         )->render();
     }

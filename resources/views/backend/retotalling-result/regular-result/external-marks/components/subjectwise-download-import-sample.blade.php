@@ -20,12 +20,12 @@
                     @endforeach
                 </select>
             </div>
-            <div class="col-md-2 form-group mb-2">
+            <div class="col-md-2 form-group mb-2 d-none">
                 <label for="export_course_type">Course Type<span class="text-danger">*</span></label>
                 <select name="export_course_type" id="export_course_type" class="form-control">
                     <option value="">--Select--</option>
-                    <option value="Annual Based">Annual Based</option>
-                    <option value="Semester Based">Semester Based</option>
+                    {{-- <option value="Annual Based">Annual Based</option> --}}
+                    <option value="Semester Based" selected>Semester Based</option>
                 </select>
                 @error('export_course_type') <small class="text-danger">{{ $message }}</small> @enderror
             </div>
@@ -39,7 +39,7 @@
                 </select>
             </div>
             <div class="col-md-2 form-group mb-2">
-                <label for="export_scheme_id">Select Scheme</label>
+                <label for="export_scheme_id">Select Scheme<span class="text-danger">*</span></label>
                 <select name="export_scheme_id" id="export_scheme_id" class="form-control">
                     <option value="">--Select--</option>
                 </select>
@@ -52,13 +52,13 @@
                 </select>
             </div>
             <div class="col-md-2 form-group mb-2" id="semester_container_export"  style="display: none;">
-                <label for="export_semester_id">Select Semester</label>
+                <label for="export_semester_id">Select Semester<span class="text-danger">*</span></label>
                 <select name="export_semester_id" id="export_semester_id" class="form-control">
                     <option value="">--Select--</option>
                 </select>
             </div>
             <div class="col-md-2 form-group mb-2" id="annual_semester_container_export"  style="display: none;">
-                <label for="export_annual_semester_id">Select Annual Terms</label>
+                <label for="export_annual_semester_id">Select Annual Terms<span class="text-danger">*</span></label>
                 <select name="export_annual_semester_id" id="export_annual_semester_id" class="form-control">
                     <option value="">--Select--</option>
                 </select>
@@ -99,7 +99,7 @@
                 <select name="result_type" id="result_type" class="form-control">
                     <option value="">--Select--</option>
                     <option value="regular">Regular / End-Sem</option>
-                    <option value="supplementary">Supplementary / Compartment</option>
+                    {{-- <option value="supplementary">Supplementary / Compartment</option> --}}
                 </select>
             </div>
             <div class="col-md-2 form-group mt-3 mb-2">
