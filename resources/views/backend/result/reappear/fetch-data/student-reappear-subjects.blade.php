@@ -122,6 +122,7 @@
                     @php
                         $student = $subjects->first()->student;
 
+                        // Subjects selected in paid Reappear Examination Form
                         $selectedSubjects = $checkedSubjects[$studentId] ?? [];
                     @endphp
 
@@ -155,32 +156,35 @@
 
                             @foreach($subjects as $row)
 
-                                @php
-                                    $subjectId = $row->subject->id;
-                                @endphp
+                                @if($row->subject)
 
-                                <div class="form-check">
+                                    @php
+                                        $subjectId = $row->subject->id;
+                                    @endphp
 
-                                    <input
-                                        class="form-check-input"
-                                        type="checkbox"
-                                        name="subject_ids[{{ $student->id }}][]"
-                                        value="{{ $subjectId }}"
-                                        id="subject{{ $student->id }}{{ $subjectId }}"
+                                    <div class="form-check">
 
-                                        {{ in_array($subjectId, $selectedSubjects) ? 'checked' : '' }}
-                                    >
+                                        <input
+                                            class="form-check-input"
+                                            type="checkbox"
+                                            name="subject_ids[{{ $student->id }}][]"
+                                            value="{{ $subjectId }}"
+                                            id="subject{{ $student->id }}{{ $subjectId }}"
+                                            {{ in_array($subjectId, $selectedSubjects) ? 'checked' : '' }}
+                                        >
 
-                                    <label
-                                        class="form-check-label align-left"
-                                        for="subject{{ $student->id }}{{ $subjectId }}"
-                                    >
-                                        {{ $row->subject->subject_code }}
-                                        -
-                                        {{ $row->subject->name }}
-                                    </label>
+                                        <label
+                                            class="form-check-label align-left"
+                                            for="subject{{ $student->id }}{{ $subjectId }}"
+                                        >
+                                            {{ $row->subject->subject_code }}
+                                            -
+                                            {{ $row->subject->name }}
+                                        </label>
 
-                                </div>
+                                    </div>
+
+                                @endif
 
                             @endforeach
 

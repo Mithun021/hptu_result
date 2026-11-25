@@ -74,6 +74,6 @@ class ReappearStudentDetail extends Model
 
     public function reappearSubjects()
     {
-        return $this->hasMany(ReappearSubject::class, 'supple_student_detail_id');
+        return $this->hasMany(ReappearSubject::class, 'reappear_student_detail_id');
     }
 }

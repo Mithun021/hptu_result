@@ -9,7 +9,7 @@ class ReappearSubject extends Model
     protected $table = 'reappear_subjects';
 
     protected $fillable = [
-        'supple_student_detail_id',
+        'reappear_student_detail_id',
         'subject_id',
     ];
 
@@ -23,7 +23,7 @@ class ReappearSubject extends Model
     {
         return $this->belongsTo(
             ReappearStudentDetail::class,
-            'supple_student_detail_id'
+            'reappear_student_detail_id'
         );
     }
 
