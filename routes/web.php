@@ -314,8 +314,6 @@ Route::middleware(['backend.auth'])->prefix('backend')->group(function () {
         Route::get('/reappear-result-prepare/fetch', [ReappearResultController::class, 'fetchReappearResult']) ->name('reappear-result-prepare.fetch');
         Route::post( '/reappear-result/save-mark', [ReappearResultController::class, 'saveReappearMark'] )->name('reappear-result.save-mark');
         Route::post( '/reappear-result/update-lock-status', [ReappearResultController::class, 'updateLockStatus'] )->name('reappear-result.update-lock-status');
-        Route::get('/reappear-subject-wise-result', [ReappearResultController::class, 'reappearSubjectWiseResult'])->name('reappear.subject-wise-result');
-        Route::get('/reappear-subject-wise-result-prepare/fetch', [ReappearResultController::class, 'fetchReappearSubjectWiseResult'])->name('reappear-subject-wise-result-prepare.fetch');
 
         Route::get('/reappear-overall-result', [ReappearResultController::class, 'reappearOverallResult'])->name('reappear.overall-result');
         Route::get('/reappear-overall-result-fetch', [ReappearResultController::class, 'fetchReappearOverallResult'])->name('reappear.fetch-overall-result');

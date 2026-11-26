@@ -9,7 +9,7 @@
 
         $.ajax({
 
-            url: "{{ route('results.supple-result-prepare.fetch') }}",
+            url: "{{ route('results.reappear-result-prepare.fetch') }}",
 
             type: "GET",
 
@@ -72,17 +72,17 @@ $(document).ready(function () {
 
             exam_id: { required: true },
 
-            // midsem_exam_id: { required: true },
-
             course_type: { required: true },
 
             course_id: { required: true },
+
+            scheme_id: { required: true },
 
             branch_id: { required: true },
 
             batch_id: { required: true },
 
-            // marks_type: { required: true },
+            marks_type: { required: true },
 
             subject_id: { required: true },
 
@@ -110,6 +110,8 @@ $(document).ready(function () {
 
             course_id: "Select course",
 
+            scheme_id: "Select scheme",
+
             branch_id: "Select branch",
 
             batch_id: "Select batch",
@@ -118,7 +120,7 @@ $(document).ready(function () {
 
             annual_semester_id: "Select annual semester",
 
-            // marks_type: "Select marks type",
+            marks_type: "Select marks type",
 
             subject_id: "Select subject",
 
@@ -192,7 +194,7 @@ $(document).on("click","#update-lock-status",function(){
 
         $.ajax({
 
-            url:"{{ route('results.supplementary-result.update-lock-status') }}",
+            url:"{{ route('results.reappear-result.update-lock-status') }}",
 
             type:"POST",
 

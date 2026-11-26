@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Model;
 class ReappearEndSemMark extends Model
 {
     protected $table = 'reappear_end_sem_marks';
-
     protected $fillable = [
 
         'exam_id',

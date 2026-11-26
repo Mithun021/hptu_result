@@ -1,5 +1,5 @@
 @extends('backend.partial.master')
-@section('title', 'Supplementary Result')
+@section('title', 'Reappear Result')
 @section('sub_title', 'Result Prepare')
 @section('backend-content')
 <div class="row">
@@ -55,8 +55,8 @@
 <script src="{{ asset('assets/libs/jquery-validate/jquery.validate.min.js') }}"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
-@include('backend.result.supplement.supple-result.components.search-marks-modal')
-@include('backend.result.supplement.supple-result.components.search-supple-result')
-@include('backend.result.supplement.supple-result.components.fetch-supple-result')
+@include('backend.result.reappear.reappear-result.components.search-marks-modal')
+@include('backend.result.reappear.reappear-result.components.search-reappear-result')
+@include('backend.result.reappear.reappear-result.components.fetch-reappear-result')
 @include('backend.result.js.export-button')
 @endsection

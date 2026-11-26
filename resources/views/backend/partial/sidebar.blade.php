@@ -121,11 +121,6 @@
                                                 Result Prepare
                                             </a>
                                         </li>
-                                       <li>
-                                            <a href="{{ route('results.reappear.subject-wise-result') }}" class="tp-link">
-                                                Subject Wise Result
-                                            </a>
-                                        </li>
                                         <li>
                                             <a href="{{ route('results.reappear.overall-result') }}" class="tp-link">
                                                 Overall Result

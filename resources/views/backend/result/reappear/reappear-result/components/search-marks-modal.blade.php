@@ -5,7 +5,7 @@
 </style>
 <div class="offcanvas offcanvas-top" tabindex="-1" id="endSemOffcanvasTop" aria-labelledby="endSemOffcanvasTopLabel">
     <div class="offcanvas-header">
-        <h5 id="endSemOffcanvasTopLabel">Search Supple Result</h5>
+        <h5 id="endSemOffcanvasTopLabel">Search Reappear Result</h5>
         <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
     </div>
     <div class="offcanvas-body card">
@@ -20,12 +20,12 @@
                     @endforeach
                 </select>
             </div>
-            <div class="col-md-2 form-group mb-2">
+            <div class="col-md-2 form-group mb-2 d-none">
                 <label for="course_type">Course Type<span class="text-danger">*</span></label>
                 <select name="course_type" id="course_type" class="form-control">
                     <option value="">--Select--</option>
-                    <option value="Annual Based">Annual Based</option>
-                    <option value="Semester Based">Semester Based</option>
+                    {{-- <option value="Annual Based">Annual Based</option> --}}
+                    <option value="Semester Based" selected>Semester Based</option>
                 </select>
                 @error('course_type') <small class="text-danger">{{ $message }}</small> @enderror
             </div>
@@ -34,12 +34,12 @@
                 <select name="course_id" id="course_id" class="form-control">
                     <option value="">--Select--</option>
                 @foreach ($courses as $course)
-                    <option value="{{ $course->id }}">{{ $course->name }}</option>
+                    <option value="{{ $course->id }}" data-course="{{ $course->course }}">{{ $course->name }}</option>
                 @endforeach
                 </select>
             </div>
             <div class="col-md-2 form-group mb-2">
-                <label for="scheme_id">Select Scheme</label>
+                <label for="scheme_id">Select Scheme<span class="text-danger">*</span></label>
                 <select name="scheme_id" id="scheme_id" class="form-control">
                     <option value="">--Select--</option>
                 </select>
@@ -52,13 +52,13 @@
                 </select>
             </div>
             <div class="col-md-2 form-group mb-2" id="semester_container"  style="display: none;">
-                <label for="semester_id">Select Semester</label>
+                <label for="semester_id">Select Semester<span class="text-danger">*</span></label>
                 <select name="semester_id" id="semester_id" class="form-control">
                     <option value="">--Select--</option>
                 </select>
             </div>
             <div class="col-md-2 form-group mb-2" id="annual_semester_container"  style="display: none;">
-                <label for="annual_semester_id">Select Annual Terms</label>
+                <label for="annual_semester_id">Select Annual Terms<span class="text-danger">*</span></label>
                 <select name="annual_semester_id" id="annual_semester_id" class="form-control">
                     <option value="">--Select--</option>
                 </select>
@@ -69,17 +69,14 @@
                     <option value="">--Select--</option>
                 </select>
             </div>
-            {{-- <div class="col-md-2 form-group mb-2">
+            <div class="col-md-2 form-group mb-2">
                 <label for="marks_type">Select Marks Type<span class="text-danger">*</span></label>
                 <select name="marks_type" id="marks_type" class="form-control">
                     <option value="">--Select--</option>
-                    <option value="Mid-Sem">Mid-Sem</option>
-                    <option value="Quiz">Quiz</option>
-                    <option value="Practical">Practical</option>
                 </select>
-            </div> --}}
+            </div>
             <div class="col-md-2 form-group mb-2" id="subject_container">
-                <label for="institute_id">Select Institute<span class="text-danger">*</span></label>
+                <label for="institute_id">Select Institute</label>
                 <select name="institute_id" id="institute_id" class="form-control">
                     <option value="">--Select--</option>
                 </select>

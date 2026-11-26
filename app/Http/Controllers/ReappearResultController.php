@@ -14,6 +14,7 @@ use App\Models\Institute;
 use App\Models\MarksGrade;
 use App\Models\MidSemMark;
 use App\Models\PassPercentage;
+use App\Models\ReappearEndSemMark;
 use App\Models\ReappearStudentDetail;
 use App\Models\ResultGpSheet;
 use App\Models\Scheme;
@@ -286,6 +287,407 @@ class ReappearResultController extends Controller
                 'message' => $e->getMessage()
             ], 500);
         }
+    }
+
+    public function reappearResultPrepare()
+    {
+        $courses = Course::all();
+        $exams = Exam::latest()->get();
+        return view('backend.result.reappear.reappear-result.index', compact('courses', 'exams'));
+    }
+
+    // public function fetchReappearResult(Request $request){
+    //     dd($request->all());
+    // }
+
+    public function fetchReappearResult(Request $request)
+    {
+        // Only Semester Based for now
+        if ($request->course_type !== 'Semester Based') {
+            return response('Only Semester Based is supported currently.', 422);
+        }
+
+        $exam = Exam::findOrFail($request->exam_id);
+        $batch = Batch::find($request->batch_id);
+        $subject = Subject::with(['course', 'branch'])
+            ->findOrFail($request->subject_id);
+
+        $marksType = $request->marks_type;
+
+        // Maximum marks for selected marks type
+        $maxMarks = match ($marksType) {
+            'external' => $subject->external_marks ?? 0,
+            default => 0,
+        };
+
+        /*
+        |--------------------------------------------------------------------------
+        | Previous Exam Sessions
+        |--------------------------------------------------------------------------
+        */
+
+        $previousExamIds = getPreviousExamSessionIds($exam->id);
+
+        // Latest previous exam first
+        $previousExamIds = array_reverse($previousExamIds);
+
+        /*
+        |--------------------------------------------------------------------------
+        | Reappear Students
+        |--------------------------------------------------------------------------
+        */
+
+        $studentDetailsQuery = ReappearStudentDetail::with([
+            'student',
+            'reappearSubjects'
+        ])
+        ->where('exam_id', $request->exam_id)
+        ->where('course_type', $request->course_type)
+        ->where('course_id', $request->course_id)
+        ->where('scheme_id', $request->scheme_id)
+        ->where('branch_id', $request->branch_id)
+        ->where('batch_id', $request->batch_id)
+        ->where('semester_id', $request->semester_id)
+        ->whereNull('annual_semester_id');
+
+        // Institute optional
+        if ($request->filled('institute_id')) {
+            $studentDetailsQuery->where(
+                'institute_id',
+                $request->institute_id
+            );
+        }
+
+        $studentDetails = $studentDetailsQuery->get()
+            ->filter(function ($detail) use ($request) {
+
+                // Student must have applied for this subject
+                return $detail->reappearSubjects->contains(
+                    'subject_id',
+                    $request->subject_id
+                );
+            })
+            ->values();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Prepare Student Marks
+        |--------------------------------------------------------------------------
+        */
+
+        $students = collect();
+
+        foreach ($studentDetails as $detail) {
+
+            $student = $detail->student;
+
+            if (!$student) {
+                continue;
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | Current Exam Reappear Marks
+            |--------------------------------------------------------------------------
+            */
+
+            $currentReappearMarkQuery = ReappearEndSemMark::where([
+                'exam_id'       => $request->exam_id,
+                'student_id'    => $student->id,
+                'subject_id'    => $request->subject_id,
+                'course_type'   => $request->course_type,
+                'course_id'     => $request->course_id,
+                'scheme_id'     => $request->scheme_id,
+                'branch_id'     => $request->branch_id,
+                'batch_id'      => $request->batch_id,
+                'semester_id'   => $request->semester_id,
+                'marks_type'    => $marksType,
+            ])
+            ->whereNull('annual_semester_id');
+
+            if ($request->filled('institute_id')) {
+                $currentReappearMarkQuery->where(
+                    'institute_id',
+                    $request->institute_id
+                );
+            }
+
+            $reappearMark = $currentReappearMarkQuery->first();
+
+            /*
+            |--------------------------------------------------------------------------
+            | Previous Reappear Marks
+            |--------------------------------------------------------------------------
+            */
+
+            $previousMark = null;
+
+            foreach ($previousExamIds as $previousExamId) {
+
+                $previousReappearQuery = ReappearEndSemMark::where([
+                    'exam_id'       => $previousExamId,
+                    'student_id'    => $student->id,
+                    'subject_id'    => $request->subject_id,
+                    'course_type'   => $request->course_type,
+                    'course_id'     => $request->course_id,
+                    'scheme_id'     => $request->scheme_id,
+                    'branch_id'     => $request->branch_id,
+                    'batch_id'      => $request->batch_id,
+                    'semester_id'   => $request->semester_id,
+                    'marks_type'    => $marksType,
+                ])
+                ->whereNull('annual_semester_id');
+
+                if ($request->filled('institute_id')) {
+                    $previousReappearQuery->where(
+                        'institute_id',
+                        $request->institute_id
+                    );
+                }
+
+                $previousReappear = $previousReappearQuery->first();
+
+                if ($previousReappear) {
+                    $previousMark = $previousReappear;
+                    break;
+                }
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | If Previous Reappear Marks Not Found
+            | Fetch Previous Regular End Sem Marks
+            |--------------------------------------------------------------------------
+            */
+
+            $endSemMark = null;
+
+            if (!$previousMark) {
+
+                foreach ($previousExamIds as $previousExamId) {
+
+                    $regularMarkQuery = EndSemMark::where([
+                        'exam_id'       => $previousExamId,
+                        'student_id'    => $student->id,
+                        'subject_id'    => $request->subject_id,
+                        'course_type'   => $request->course_type,
+                        'course_id'     => $request->course_id,
+                        'scheme_id'     => $request->scheme_id,
+                        'branch_id'     => $request->branch_id,
+                        'batch_id'      => $request->batch_id,
+                        'semester_id'   => $request->semester_id,
+                        'marks_type'    => $marksType,
+                    ])
+                    ->whereNull('annual_semester_id');
+
+                    if ($request->filled('institute_id')) {
+                        $regularMarkQuery->where(
+                            'institute_id',
+                            $request->institute_id
+                        );
+                    }
+
+                    $endSemMark = $regularMarkQuery->first();
+
+                    if ($endSemMark) {
+                        break;
+                    }
+                }
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | Build Row
+            |--------------------------------------------------------------------------
+            */
+
+            $row = new \stdClass();
+
+            $row->student = $student;
+
+            // Editable current reappear entry
+            $row->reappear_mark = $reappearMark;
+
+            // Previous reappear record, if available
+            $row->previous_mark = $previousMark;
+
+            // Regular reference marks, if no previous reappear exists
+            $row->end_sem_mark = $endSemMark;
+
+            $students->push($row);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Return Result Blade
+        |--------------------------------------------------------------------------
+        */
+
+        return view(
+            'backend.result.reappear.reappear-result.render-result-sheet',
+            compact(
+                'request',
+                'exam',
+                'batch',
+                'subject',
+                'students',
+                'maxMarks'
+            )
+        );
+    }
+
+    public function saveReappearMark(Request $request)
+    {
+        /* ================= VALIDATION ================= */
+
+        $request->validate([
+            'exam_id'        => 'required',
+            'student_id'     => 'required',
+            'subject_id'     => 'required',
+            'course_type'    => 'required',
+            'course_id'      => 'required',
+            'branch_id'      => 'required',
+            'batch_id'       => 'required',
+            'institute_id'   => 'nullable',
+            'marks_type'     => 'required',
+            'max_marks'      => 'required|numeric|min:0',
+            'obtained_marks' => 'nullable|numeric|min:0',
+            'grace_marks'    => 'nullable|numeric',
+            'exam_status'    => 'required|in:present,absent,umc,i/f',
+        ]);
+
+        /* ================= INSTITUTE ID ================= */
+
+        $instituteId = $request->institute_id;
+
+        if (empty($instituteId)) {
+            $instituteId = Student::where('id', $request->student_id)
+                ->value('institute_id');
+        }
+
+        /* ================= MARKS VALIDATION ================= */
+
+        if (
+            $request->exam_status == 'present' &&
+            $request->obtained_marks !== null &&
+            $request->obtained_marks > $request->max_marks
+        ) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Obtained marks cannot be greater than Maximum Marks (' . $request->max_marks . ').'
+            ], 422);
+        }
+
+        /* ================= PREPARE DATA ================= */
+
+        $data = [
+            'exam_id'            => $request->exam_id,
+            'student_id'         => $request->student_id,
+            'subject_id'         => $request->subject_id,
+            'course_type'        => $request->course_type,
+            'course_id'          => $request->course_id,
+            'branch_id'          => $request->branch_id,
+            'batch_id'           => $request->batch_id,
+            'semester_id'        => $request->semester_id,
+            'annual_semester_id' => $request->annual_semester_id,
+            'scheme_id'          => $request->scheme_id,
+            'institute_id'       => $instituteId,
+            'marks_type'         => $request->marks_type,
+        ];
+
+        /* ================= SAVE / UPDATE ================= */
+
+        ReappearEndSemMark::updateOrCreate(
+            $data,
+            [
+                'max_marks' => $request->max_marks,
+
+                'obtained_marks' => $request->exam_status == 'present'
+                    ? $request->obtained_marks
+                    : null,
+
+                'grace_marks' => $request->grace_marks,
+
+                'exam_status' => $request->exam_status,
+
+                'is_locked' => 0,
+            ]
+        );
+
+        /* ================= RESPONSE ================= */
+
+        return response()->json([
+            'status'  => true,
+            'message' => 'Saved Successfully'
+        ]);
+    }
+
+    public function updateLockStatus(Request $request)
+    {
+        /* ================= VALIDATION ================= */
+
+        $request->validate([
+            'student_ids'  => 'required|array|min:1',
+            'student_ids.*' => 'required',
+            'is_locked'    => 'required|in:0,1',
+            'exam_id'      => 'required',
+            'subject_id'   => 'required',
+            'course_type'  => 'required',
+            'course_id'    => 'required',
+            'branch_id'    => 'required',
+            'batch_id'     => 'required',
+            'institute_id' => 'nullable',
+        ]);
+
+        /* ================= BASE QUERY ================= */
+
+        $query = ReappearEndSemMark::whereIn('student_id', $request->student_ids)
+            ->where('exam_id', $request->exam_id)
+            ->where('subject_id', $request->subject_id)
+            ->where('course_type', $request->course_type)
+            ->where('course_id', $request->course_id)
+            ->where('branch_id', $request->branch_id)
+            ->where('batch_id', $request->batch_id);
+
+        /* ================= INSTITUTE FILTER ================= */
+
+        if ($request->filled('institute_id')) {
+            $query->where('institute_id', $request->institute_id);
+        }
+
+        /* ================= SCHEME FILTER ================= */
+
+        if ($request->filled('scheme_id')) {
+            $query->where('scheme_id', $request->scheme_id);
+        }
+
+        /* ================= SEMESTER FILTER ================= */
+
+        if ($request->course_type == 'Semester Based') {
+
+            $query->where('semester_id', $request->semester_id)
+                ->whereNull('annual_semester_id');
+
+        } else {
+
+            $query->where('annual_semester_id', $request->annual_semester_id)
+                ->whereNull('semester_id');
+        }
+
+        /* ================= UPDATE LOCK STATUS ================= */
+
+        $updated = $query->update([
+            'is_locked' => $request->is_locked
+        ]);
+
+        /* ================= RESPONSE ================= */
+
+        return response()->json([
+            'status'  => true,
+            'message' => $updated . ' record(s) ' .
+                ($request->is_locked == 1 ? 'locked' : 'unlocked') .
+                ' successfully.'
+        ]);
     }
 
 }
