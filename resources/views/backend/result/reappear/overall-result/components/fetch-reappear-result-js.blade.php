@@ -14,17 +14,15 @@ $(document).ready(function () {
 
             exam_id: { required: true },
 
-            // midsem_exam_id: { required: true },
-
             course_type: { required: true },
 
             course_id: { required: true },
 
+            scheme_id: { required: true },
+
             branch_id: { required: true },
 
             batch_id: { required: true },
-
-            institute_id: { required: true },
 
             semester_id: {
                 required: function () {
@@ -44,11 +42,11 @@ $(document).ready(function () {
 
             exam_id: "Please select exam",
 
-            // midsem_exam_id: "Please select Mid-Sem exam",
-
             course_type: "Select course type",
 
             course_id: "Select course",
+
+            scheme_id: "Select scheme",
 
             branch_id: "Select branch",
 
@@ -79,7 +77,7 @@ $(document).ready(function () {
 
         $.ajax({
 
-            url: "{{ route('results.supple.fetch-overall-result') }}",
+            url: "{{ route('results.reappear.fetch-overall-result') }}",
 
             type: "GET",
 

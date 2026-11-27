@@ -1,446 +1,558 @@
 <style>
-    .result-table {
+    .result-sheet {
         width: 100%;
-        margin: auto;
-        font-family: "Times New Roman", serif;
+        overflow-x: auto;
+        color: #000;
     }
 
-    .result-table .header {
-        text-align: center;
-        margin-bottom: 10px;
-    }
-
-    .result-table .header h3 {
-        margin: 0;
-        font-size: 16px;
-        font-weight: bold;
-    }
-
-    .result-table .header h4 {
-        margin: 0;
-        font-size: 14px;
-    }
-
-    .result-table .header p {
-        margin: 0;
-        font-size: 13px;
-    }
-
-    table {
-        width: 100%;
-        border-collapse: collapse;
-    }
-
-    th, td {
+    .result-sheet table {
+        width: max-content;
+        min-width: 100%;
         border: 1px solid #000;
-        padding: 4px;
+        border-collapse: collapse;
+        font-size: 9px;
+    }
+
+    .result-sheet table tr th {
         text-align: center;
-        font-size: 12px;
     }
 
-    th {
-        background: #e6e6e6;
-        font-weight: bold;
+    .result-sheet table tr th,
+    .result-sheet table tr td {
+        border: 1px solid #000;
+        border-collapse: collapse;
+        text-align: center;
     }
 
-    td.left {
-        text-align: left;
+    .vertical-text {
+        writing-mode: vertical-rl;
+        transform: rotate(360deg);
+        white-space: nowrap;
     }
 
-    .fail {
-        color: red;
-        font-weight: bold;
+    .mini-text {
+        font-size: 6px;
     }
 
-    .pass {
-        color: green;
-        font-weight: bold;
+    .result-sheet table tbody tr td:nth-child(2),
+    .result-sheet table tbody tr td:nth-child(3),
+    .result-sheet table tbody tr td:nth-child(4) {
+        min-width: 120px;
     }
 
-    .supply {
-        color: orange;
-        font-weight: bold;
+    .result-sheet table thead tr:last-child th:nth-child(2),
+    .result-sheet table thead tr:last-child th:nth-child(3),
+    .result-sheet table thead tr:last-child th:nth-child(4) {
+        min-width: 120px;
     }
 
-    .remarks {
-        text-align: left;
-        font-size: 12px;
+    .result-sheet table tbody tr td {
+        vertical-align: top;
+    }
+
+    td.failed-bg {
+        background-color: #fd4242;
+        color: #fff;
+    }
+
+    /* Reappear applied but marks not entered */
+    td.reappear-pending {
+        background: #D6D6D6 !important;
+    }
+
+    /* Reappear marks entered */
+    td.reappear-entered {
+        background: linear-gradient(
+            to bottom,
+            #D6D6D6 0%,
+            #D6D6D6 50%,
+            #74F26F 50%,
+            #74F26F 100%
+        ) !important;
+        color: #000 !important;
     }
 </style>
 
 @php
-    $filteredSubjects = $subjects;
+    /*
+    |--------------------------------------------------------------------------
+    | FILTER SUBJECTS - ONLY SUBJECTS WITH ANY MARKS
+    |--------------------------------------------------------------------------
+    */
+
+    $studentIds = $students->pluck('id')->toArray();
+
+    $subjectCount = $filteredSubjects->count();
+
+    $totalColumns = 5 + ($subjectCount * 4) + 9;
+
+    $examMonth = strtoupper($exam->exam_month ?? '');
+    $examYear = $exam->exam_year ?? '';
+
+    $sessionName = trim($examMonth . ' ' . $examYear);
+    $semesterName = $className;
+
+    $courseName = $course->name ?? '';
+    $branchName = $branch->name ?? '';
+    $schemeName = $scheme->name ?? '';
+
+    $universityName = 'Himachal Pradesh Technical Univesity, Hamirpur';
+
+    $isFirstSemester = strtoupper(trim($semester->name ?? '')) === 'I';
+
+    $specialGrades = ['AB', 'UMC', 'I/F', 'R', 'F'];
+
+    $resultGpSheetData = [];
+    $studentResultSummaryData = [];
 @endphp
-<table class="result-table">
-    <thead class="result-header">
-        <!-- ================= HEADER TITLE ================= -->
-        <tr>
-            <th colspan="{{ 3 + count($filteredSubjects) + 4 }}" style="text-align:center;">
-                <h3 style="margin:0;">OFFICE OF CONTROLLER OF EXAMINATIONS</h3>
-                <h4 style="margin:0;">
-                    GURU ANGAD DEV VETERINARY AND ANIMAL SCIENCES UNIVERSITY, LUDHIANA (INDIA)
-                </h4>
-                <h4 style="margin:0;">
-                    {{ $exam->supple_result_sheet ?? $exam->name }}
-                </h4>
-                <p style="text-align:left;">
-                    {{ $className }}
-                    {{ $course->name ?? '' }}
-                    {{ (!empty($branch->name) && strtoupper($branch->name) != 'NA') ? "({$branch->name})" : '' }}
-                </p>
-            </th>
-        </tr>
-        <tr>
-            <th rowspan="2">Sr. No.</th>
-            <th rowspan="2">Student Name</th>
-            <th rowspan="2">Admission No.</th>
-            <th colspan="{{ count($filteredSubjects) }}">Subjects</th>
-            <th rowspan="2">Remarks</th>
-            <th rowspan="2" class="no-export">GPA</th>
-            <th rowspan="2" class="no-export">CGPA</th>
-            <th rowspan="2" class="no-export">Grade</th>
-        </tr>
 
-        <tr>
-            @foreach($filteredSubjects as $sub)
-                <th>{{ $sub->subject_code }}</th>
-            @endforeach
-        </tr>
-    </thead>
+<div class="result-sheet">
+    <table>
+        <thead>
 
-    <tbody>
+            {{-- UNIVERSITY NAME --}}
+            <tr>
+                <th colspan="{{ $totalColumns }}">
+                    {{ $universityName }}
+                </th>
+            </tr>
 
-        @php $srNo = 1; @endphp
+            {{-- EXAM SESSION --}}
+            <tr>
+                <th colspan="{{ $totalColumns }}">
+                    RESULT TABULATION SHEET OF EXAMINATION SESSION,
+                    {{ $sessionName }}
+                </th>
+            </tr>
 
-        @foreach($students as $student)
+            {{-- COURSE DETAILS --}}
+            <tr>
+                <th colspan="{{ $totalColumns }}">
+                    {{ $courseName }}
 
-        <tr>
+                    @if(!empty($branchName))
+                        | {{ $branchName }}
+                    @endif
 
-            <td>{{ $srNo++ }}</td>
+                    | {{ $schemeName }}
+                    | {{ $semesterName }}
+                    || Reappear
+                </th>
+            </tr>
 
-            <td class="left">{{ $student->student_name }}</td>
+            {{-- SUBJECT CODES + SUMMARY --}}
+            <tr>
+                <th colspan="5">
+                    Name & Particular of Candidate
+                </th>
 
-            <td>{{ $student->university_roll_no }}</td>
+                @foreach($filteredSubjects as $subject)
+                    <th colspan="4">
+                        {{ $subject->subject_code }}
+                    </th>
+                @endforeach
 
-            @php
-                $grandTotalMarks = 0;   // SAME AS SUBJECT-WISE G TOTAL
-                $remarks = [];
-                // GPA Calculation
-                $totalCreditHours = 0;
-                $totalWeightedGP = 0;
-            @endphp
+                <th rowspan="6">Result</th>
 
-            @foreach($filteredSubjects as $sub)
+                <th rowspan="6">
+                    <span class="vertical-text">
+                        Total Current Credit Point
+                    </span>
+                </th>
+
+                <th rowspan="6">
+                    <span class="vertical-text">
+                        Current Grade Point Earn
+                    </span>
+                </th>
+
+                <th rowspan="6">
+                    <span class="vertical-text">SGPA</span>
+                </th>
+
+                <th rowspan="6">
+                    <span class="vertical-text">
+                        Previous Credit Point
+                    </span>
+                </th>
+
+                <th rowspan="6">
+                    <span class="vertical-text">
+                        Previous Grade Point Earn
+                    </span>
+                </th>
+
+                <th rowspan="6">
+                    <span class="vertical-text">CGPA</span>
+                </th>
+
+                <th rowspan="6">
+                    <span class="vertical-text">
+                        Previous Result Status
+                    </span>
+                </th>
+
+                <th rowspan="6">
+                    <span class="vertical-text">Remark</span>
+                </th>
+            </tr>
+
+            {{-- SUBJECT NAMES --}}
+            <tr>
+                <th rowspan="2" colspan="5"></th>
+
+                @foreach($filteredSubjects as $subject)
+                    <th colspan="4">
+                        {{ $subject->name }} - {{ $subject->type }}
+                    </th>
+                @endforeach
+            </tr>
+
+            {{-- EXTERNAL / INTERNAL / TOTAL / GRADE --}}
+            <tr>
+                @foreach($filteredSubjects as $subject)
+                    <th><span class="vertical-text">External</span></th>
+                    <th><span class="vertical-text">Internal</span></th>
+                    <th><span class="vertical-text">Total</span></th>
+                    <th><span class="vertical-text">Grade</span></th>
+                @endforeach
+            </tr>
+
+            {{-- MAXIMUM MARKS --}}
+            <tr>
+                <th colspan="5"></th>
+
+                @foreach($filteredSubjects as $subject)
+                    <th>{{ $subject->external_marks }}</th>
+                    <th>{{ $subject->internal_marks }}</th>
+                    <th>
+                        {{ (float)$subject->external_marks + (float)$subject->internal_marks }}
+                    </th>
+                    <th></th>
+                @endforeach
+            </tr>
+
+            {{-- PASS MARKS --}}
+            <tr>
+                <th colspan="5"></th>
+
+                @foreach($filteredSubjects as $subject)
+                    @php
+                        $passPercent = $overallPassPercent;
+                    @endphp
+
+                    <th>
+                        {{ round(($subject->external_marks * $passPercent) / 100, 2) }}
+                    </th>
+
+                    <th>
+                        {{ round(($subject->internal_marks * $passPercent) / 100, 2) }}
+                    </th>
+
+                    <th>
+                        {{ round(
+                            (($subject->external_marks + $subject->internal_marks) * $passPercent) / 100,
+                            2
+                        ) }}
+                    </th>
+
+                    <th></th>
+                @endforeach
+            </tr>
+
+            {{-- CREDIT --}}
+            <tr>
+                <th>SN</th>
+                <th>Roll No</th>
+                <th>College</th>
+                <th>Name</th>
+                <th>Father Name</th>
+
+                @foreach($filteredSubjects as $subject)
+                    <th></th>
+                    <th></th>
+                    <th></th>
+                    <th>{{ $subject->credits }}</th>
+                @endforeach
+            </tr>
+
+        </thead>
+
+        {{-- STUDENT RESULT --}}
+        <tbody>
+
+            @foreach($students as $index => $student)
 
                 @php
+                    $studentResult = $marks[$student->id] ?? [];
+                    $studentSubjectMarks = $studentResult['subjects'] ?? [];
+                    $studentInstituteName = $institutes[$student->institute_id] ?? '';
 
-                /*
-                =========================================================
-                IS THIS SUBJECT SUPPLEMENTARY?
-                =========================================================
-                */
+                    $failedSubjectCodes = [];
 
-                $isSupple =
-                    isset($suppleSubjectMap[$student->id][$sub->id]);
+                    foreach($filteredSubjects as $subject) {
+                        $subjectData = $studentSubjectMarks[$subject->id] ?? null;
+                        $subjectResult = $subjectData['result'] ?? '';
 
-                /*
-                =========================================================
-                ORIGINAL SAVED RESULT
-                =========================================================
-                */
-
-                $savedRow =
-                    $resultGpSheet[$student->id][$sub->id][0] ?? null;
-
-                $credit = $sub->credits ?? 0;
-
-                /*
-                =========================================================
-                SUPPLE EXTERNAL MARK
-                =========================================================
-                */
-
-                $suppleExternal =
-                    $suppleEndSemMarks[$student->id][$sub->id]['external'][0] ?? null;
-
-                $hasSuppleMarks = !is_null($suppleExternal);
-
-                /*
-                =========================================================
-                DEFAULT
-                =========================================================
-                */
-
-                $class = '';
-                $value = '-';
-                $smallGp = null;
-
-                /*
-                =========================================================
-                CASE 1:
-                NOT SUPPLE
-                OR
-                SUPPLE BUT MARKS NOT UPLOADED
-                → SHOW ORIGINAL SAVED RESULT
-                =========================================================
-                */
-
-                if (!$isSupple || ($isSupple && !$hasSuppleMarks)) {
-
-                    if ($savedRow) {
-
-                        $savedGp = number_format($savedRow->result_gp, 3);
-
-                        if ($savedRow->result == 'PASS') {
-
-                            $class = 'pass';
-                            $value = $savedGp;
-
-                            // GP → Marks conversion
-                            $grandTotalMarks += ($savedRow->result_gp * 10);
-                            $totalCreditHours += $credit;
-
-                            $totalWeightedGP +=
-                                ($savedRow->result_gp * $credit);
-
-                        } elseif ($savedRow->result == 'SUPPLE') {
-
-                            $class = 'supply';
-                            $value = 'Supple';
-                            $smallGp = $savedGp;
-
-                            $remarks[] = 'Supple ' . $sub->subject_code;
-
-                            $totalCreditHours += $credit;
-
-                        } else {
-
-                            $class = 'fail';
-                            $value = 'Fail';
-                            $smallGp = $savedGp;
-
-                            $remarks[] = 'Fail ' . $sub->subject_code;
-
-                            $totalCreditHours += $credit;
+                        if($subjectResult !== '' && $subjectResult !== 'PASS') {
+                            $failedSubjectCodes[] = $subject->subject_code;
                         }
                     }
 
-                } else {
+                    $currentResult = !empty($failedSubjectCodes)
+                        ? implode(', ', $failedSubjectCodes)
+                        : 'PASS';
 
-                    /*
-                    =========================================================
-                    CASE 2:
-                    SUPPLEMENTARY MARKS UPLOADED
-                    APPLY SUBJECT-WISE SUPPLE LOGIC
-                    =========================================================
-                    */
-
-                    /*
-                    -----------------------------
-                    INTERNAL MARKS
-                    -----------------------------
-                    */
-
-                    $mid =
-                        $midSemMarks[$student->id][$sub->id]['Mid-Sem'][0]->obtained_marks ?? 0;
-
-                    $quiz =
-                        $midSemMarks[$student->id][$sub->id]['Quiz'][0]->obtained_marks ?? 0;
-
-                    /*
-                    -----------------------------
-                    SUPPLE EXTERNAL
-                    -----------------------------
-                    */
-
-                    $external =
-                        $suppleExternal->obtained_marks ?? 0;
-
-                    $grace =
-                        $suppleExternal->grace_marks ?? 0;
-
-                    /*
-                    =========================================================
-                    THEORY TOTAL
-                    SAME AS SUBJECT-WISE RESULT
-                    =========================================================
-                    */
-
-                    $theoryTotal =
-                        $mid
-                        + $quiz
-                        + $external
-                        + $grace;
-
-                    /*
-                    =========================================================
-                    PRACTICAL TOTAL
-                    SAME AS SUBJECT-WISE RESULT
-                    =========================================================
-                    */
-
-                    $practicalFinal = 0;
-
-                    if ($sub->type == 'Theory') {
-
-                        // Theory subject practical component
-                        $practicalFinal =
-                            $midSemMarks[$student->id][$sub->id]['Practical'][0]->obtained_marks ?? 0;
-                    }
-
-                    $practicalTotal = $practicalFinal;
-
-                    /*
-                    =========================================================
-                    G TOTAL
-                    SAME AS SUBJECT-WISE RESULT
-                    =========================================================
-                    */
-
-                    $grandSubjectTotal =
-                        $theoryTotal + $practicalTotal;
-
-                    /*
-                    =========================================================
-                    THEORY PASS RULE
-                    Mid + Quiz + External + Grace
-                    >= 50% of Theory Max
-                    =========================================================
-                    */
-
-                    $theoryTotalMax =
-                        $sub->mid_sem_marks1
-                        + $sub->mid_sem_marks2
-                        + $sub->external_marks;
-
-                    $requiredMarks =
-                        ($theoryTotalMax * 50) / 100;
-
-                    /*
-                    =========================================================
-                    GP
-                    SAME AS SUBJECT-WISE RESULT
-                    GP = G TOTAL / 10
-                    =========================================================
-                    */
-
-                    $calculatedGp =
-                        number_format($grandSubjectTotal / 10, 3);
-
-                    /*
-                    =========================================================
-                    FINAL RESULT
-                    =========================================================
-                    */
-
-                    if ($theoryTotal >= $requiredMarks) {
-
-                        // PASS → show GP only
-
-                        $class = 'pass';
-                        $value = $calculatedGp;
-
-                        // Add actual G Total
-                        $grandTotalMarks += $grandSubjectTotal;
-
-                        $totalCreditHours += $credit;
-
-                        $totalWeightedGP +=
-                            ($calculatedGp * $credit);
-
-                    } else {
-
-                        // FAIL → show Fail + small GP
-
-                        $class = 'fail';
-                        $value = 'Fail';
-                        $smallGp = $calculatedGp;
-
-                        $remarks[] = 'Fail ' . $sub->subject_code;
-
-                        $totalCreditHours += $credit;
-                    }
-                }
-
+                    $studentResultSummaryData[] = [
+                        'student_id' => $student->id,
+                        'exam_id' => $exam->id,
+                        'course_type' => $courseType ?? ($course->course_type ?? null),
+                        'course_id' => $course->id,
+                        'scheme_id' => $scheme->id,
+                        'branch_id' => $branch->id,
+                        'semester_id' => $semester->id,
+                        'annual_semester_id' => null,
+                        'batch_id' => $batch->id,
+                        'institute_id' => $instituteId ?? $student->institute_id,
+                        'sgpa' => (float)($studentResult['sgpa'] ?? 0),
+                        'cgpa' => (float)($studentResult['cgpa'] ?? 0),
+                        'result_status' => empty($failedSubjectCodes) ? 'PASS' : 'FAIL',
+                        'remarks' => !empty($failedSubjectCodes)
+                            ? implode(', ', $failedSubjectCodes)
+                            : 'PASS',
+                    ];
                 @endphp
 
-                <td class="{{ $class }}">
+                <tr>
 
-                    <div style="font-weight:bold; font-size:13px;">
+                    {{-- SERIAL --}}
+                    <td>{{ $loop->iteration }}</td>
 
-                        {{-- Same color as class, only add * when supple marks uploaded --}}
-                        @if($isSupple && $hasSuppleMarks)
+                    {{-- ROLL NO --}}
+                    <td>{{ $student->university_roll_no }}</td>
 
-                            {{ $value }}<sup style="font-size:10px;">*</sup>
+                    {{-- COLLEGE --}}
+                    <td>{{ $studentInstituteName }}</td>
 
-                        @else
+                    {{-- STUDENT NAME --}}
+                    <td>{{ $student->student_name }}</td>
 
-                            {{ $value }}
+                    {{-- FATHER NAME --}}
+                    <td>{{ $student->father_name }}</td>
 
+                    {{-- SUBJECTS --}}
+                    @foreach($filteredSubjects as $subject)
+
+                        @php
+                            $subjectData = $studentSubjectMarks[$subject->id] ?? null;
+
+                            $internal = $subjectData['internal_marks'] ?? null;
+                            $external = $subjectData['external_marks'] ?? null;
+                            $total = $subjectData['total'] ?? null;
+                            $result = $subjectData['result'] ?? '';
+                            $percentage = $subjectData['percentage'] ?? null;
+                            $grade = $subjectData['grade'] ?? '';
+                            $gradePoint = $subjectData['grade_point'] ?? 0;
+                            $creditScore = $subjectData['credit_score'] ?? 0;
+
+                            $isFailed = $result !== '' && $result !== 'PASS';
+
+                            /*
+                            |--------------------------------------------------------------------------
+                            | REAPPEAR CELL COLOR
+                            |--------------------------------------------------------------------------
+                            */
+
+                            $studentAppliedSubjects = $appliedSubjectMap[$student->id] ?? [];
+
+                            $isReappearApplied = in_array(
+                                $subject->id,
+                                $studentAppliedSubjects
+                            );
+
+                            $reappearMarkEntered = $reappearCurrentMarksMap[$student->id][$subject->id]
+                                ?? null;
+
+                            if($isReappearApplied) {
+                                $reappearCellClass = $reappearMarkEntered
+                                    ? 'reappear-entered'
+                                    : 'reappear-pending';
+                            } else {
+                                $reappearCellClass = '';
+                            }
+
+                            /*
+                            |--------------------------------------------------------------------------
+                            | RESULT GP SHEET DATA
+                            |--------------------------------------------------------------------------
+                            */
+
+                            $normalizedGrade = strtoupper(trim((string)$grade));
+
+                            $isSpecialGradeForCredit = in_array(
+                                $normalizedGrade,
+                                ['AB', 'UMC', 'I/F']
+                            );
+
+                            $storedGradePoint = $isSpecialGradeForCredit
+                                ? 0
+                                : (float)$gradePoint;
+
+                            $storedCredits = (float)($subject->credits ?? 0);
+
+                            $resultGpSheetData[] = [
+                                'student_id' => $student->id,
+                                'exam_id' => $exam->id,
+                                'course_type' => $courseType ?? ($course->course_type ?? null),
+                                'course_id' => $course->id,
+                                'scheme_id' => $scheme->id,
+                                'branch_id' => $branch->id,
+                                'semester_id' => $semester->id,
+                                'annual_semester_id' => null,
+                                'batch_id' => $batch->id,
+                                'institute_id' => $instituteId ?? $student->institute_id,
+                                'subject_id' => $subject->id,
+                                'credits' => $storedCredits,
+                                'result' => $result === 'PASS' ? 'PASS' : 'FAIL',
+                                'earn_credit_point' => $storedGradePoint,
+                                'grade' => $grade,
+                                'gain_percentage' => $result === 'PASS'
+                                    ? (float)($percentage ?? 0)
+                                    : 0,
+                                'credit_score' => $storedCredits * $storedGradePoint,
+                            ];
+
+                            /*
+                            |--------------------------------------------------------------------------
+                            | TOTAL DISPLAY
+                            |--------------------------------------------------------------------------
+                            */
+
+                            $totalDisplay = $total;
+
+                            if(in_array(strtoupper(trim((string)$grade)), $specialGrades)) {
+                                $totalDisplay = $grade;
+                            }
+
+                            $isSpecialTotal = in_array(
+                                strtoupper(trim((string)$totalDisplay)),
+                                $specialGrades
+                            );
+                        @endphp
+
+                        {{-- EXTERNAL --}}
+                        <td class="{{ $reappearCellClass }}">
+                            {{ $external !== null && !is_numeric($external)
+                                ? $external
+                                : ($external !== null ? number_format((float)$external, 2) : '') }}
+                        </td>
+
+                        {{-- INTERNAL --}}
+                        <td class="{{ $reappearCellClass }}">
+                            {{ $internal !== null && !is_numeric($internal)
+                                ? $internal
+                                : ($internal !== null ? number_format((float)$internal, 2) : '') }}
+                        </td>
+
+                        {{-- TOTAL --}}
+                        <td class="{{ $reappearCellClass }}">
+                            @if($totalDisplay !== null && $totalDisplay !== '')
+                                @if(in_array(strtoupper(trim((string)$totalDisplay)), $specialGrades))
+                                    {{ $totalDisplay }}
+                                @else
+                                    {{ number_format((float)$totalDisplay, 2) }}
+                                @endif
+                            @endif
+                        </td>
+
+                        {{-- GRADE --}}
+                        <td class="{{ $isFailed ? 'failed-bg' : '' }} {{ $reappearCellClass }}">
+
+                            @if($result !== '')
+
+                                {{ $grade !== '' ? $grade : $result }}
+
+                                @if($result === 'PASS')
+                                    <br>
+                                    <span class="mini-text">
+                                        {{ number_format((float)$percentage, 2) }}%
+                                    </span>
+                                    <br>
+                                    <span class="mini-text">
+                                        {{ $gradePoint }}
+                                    </span>
+                                    <br>
+                                    <span class="mini-text">
+                                        {{ number_format((float)$creditScore, 2) }}
+                                    </span>
+                                @endif
+
+                            @endif
+
+                        </td>
+
+                    @endforeach
+
+                    {{-- CURRENT RESULT --}}
+                    <td>{{ $currentResult }}</td>
+
+                    {{-- CURRENT CREDIT --}}
+                    <td>
+                        {{ number_format((float)($studentResult['current_credit_point'] ?? 0), 2) }}
+                    </td>
+
+                    {{-- CURRENT GRADE POINT EARN --}}
+                    <td>
+                        {{ number_format((float)($studentResult['current_grade_point_earn'] ?? 0), 2) }}
+                    </td>
+
+                    {{-- SGPA --}}
+                    <td>
+                        {{ number_format((float)($studentResult['sgpa'] ?? 0), 2) }}
+                    </td>
+
+                    {{-- PREVIOUS CREDIT --}}
+                    <td>
+                        {{ number_format((float)($studentResult['previous_credit_point'] ?? 0), 2) }}
+                    </td>
+
+                    {{-- PREVIOUS GRADE POINT EARN --}}
+                    <td>
+                        {{ number_format((float)($studentResult['previous_grade_point_earn'] ?? 0), 2) }}
+                    </td>
+
+                    {{-- CGPA --}}
+                    <td>
+                        {{ number_format((float)($studentResult['cgpa'] ?? 0), 2) }}
+                    </td>
+
+                    {{-- PREVIOUS RESULT STATUS --}}
+                    <td>
+                        @if(!$isFirstSemester)
+                            {{ $studentResult['previous_result_status'] ?? '' }}
                         @endif
+                    </td>
 
-                    </div>
+                    {{-- REMARK --}}
+                    <td>
+                        {{ $studentResult['remark'] ?? '' }}
+                    </td>
 
-                    @if($smallGp)
-
-                        <small style="font-size:10px; color:#555;" class="no-export">
-                            {{ $smallGp }}
-                        </small>
-
-                    @endif
-
-                </td>
+                </tr>
 
             @endforeach
 
-            @php
-
-                /*
-                =========================================================
-                CP / GPA / CGPA
-                SAME AS SUBJECT-WISE SHEET
-                CP = GRAND TOTAL / 10
-                =========================================================
-                */
-
-                $gpa =
-                    $totalCreditHours > 0
-                        ? number_format(
-                            $totalWeightedGP /
-                            $totalCreditHours,
-                            3
-                        )
-                        : 0;
-
-                $cgpa = $gpa;
-
-            @endphp
-
-            <td class="remarks">
-
-                @if(count($remarks))
-
-                    {{ implode(', ', $remarks) }}
-
-                @else
-
-                    <span class="pass">Pass</span>
-
-                @endif
-
-            </td>
-
-            <td class="pass no-export">{{ $gpa }}</td>
-
-            <td class="pass no-export">{{ $cgpa }}</td>
-
-            <td class="pass no-export">-</td>
-
-        </tr>
-
-        @endforeach
-
         </tbody>
+    </table>
+</div>
 
+{{-- JSON DATA --}}
+<input type="hidden"
+       name="result_gp_sheet_data"
+       id="result_gp_sheet_data"
+       value="{{ json_encode($resultGpSheetData) }}">
 
-</table>
+<input type="hidden"
+       name="student_result_summary_data"
+       id="student_result_summary_data"
+       value="{{ json_encode($studentResultSummaryData) }}">
